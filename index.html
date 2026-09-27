@@ -1,0 +1,1477 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canlı grafik</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="ikon.svg">
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="hesap.js"></script>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
+*{box-sizing:border-box}html{background:#0f1115}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+#acilis{padding:24px 16px;color:#c9ced8;font:15px/1.6 -apple-system,Segoe UI,Roboto,sans-serif}
+#hata-kutu{display:none;margin:12px 16px;padding:12px 14px;border:1px solid #d03b3b;border-radius:8px;
+  background:rgba(208,59,59,.12);color:#f19a9a;font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap}
+header{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:20px;margin:0}.big{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}.dim{color:var(--dim)}
+.rozet{font-size:12px;padding:2px 8px;border-radius:10px;background:#3a2327;color:#ef9a9a}
+.rozet.canli{background:#173a33;color:#80cbc4}
+.kontrol{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px}
+button{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+button.aktif{border-color:var(--cone);color:#f3c5ff}
+button:disabled{opacity:.55;cursor:default}
+.sekme button{padding:6px 16px;font-weight:600}
+.sekme button.aktif{background:#241a2b;border-color:var(--cone);color:#f3c5ff}
+.gizli{display:none !important}
+#sapma b{font-weight:600}
+input,select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:inherit}
+.poz-bilgi{padding:2px 16px 6px;font-size:15px;font-variant-numeric:tabular-nums}
+.poz-bilgi:empty{display:none}
+.poz-etiket{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-right:6px}
+.poz-etiket.long{background:#173a33;color:#80cbc4}.poz-etiket.short{background:#3a2327;color:#ef9a9a}
+#alan{display:flex;gap:10px;margin:0 8px;align-items:stretch}
+#chart{height:540px;flex:1;min-width:0}
+.coin-sec{display:inline-flex;gap:6px;align-items:center}
+.coin-sec input{width:150px;text-transform:uppercase}
+/* Strateji paneli */
+#panel{width:340px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+  overflow-y:auto;max-height:540px;font-size:13px}
+#panel h2{font-size:15px;margin:0 0 10px}
+#panel .p-bas{color:var(--dim);font-size:12px;margin-bottom:3px}
+#panel .p-satir{display:flex;gap:6px;margin-bottom:10px}
+#panel .p-satir input{flex:1;min-width:0}
+#panel .p-durum{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+#panel .p-durum > div{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+#panel .p-durum .genis{grid-column:1/-1}
+#panel .p-durum b{display:block;font-size:14px;margin-top:2px}
+#panel .p-form{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-bottom:10px}
+#panel .p-form label{display:flex;flex-direction:column;gap:3px;color:var(--dim);font-size:12px}
+#panel .p-form input{width:100%}
+#panel .yon-sec{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+#panel .yon-sec button{font-weight:600;padding:6px}
+#panel .yon-sec button.aktif[data-yon="long"]{background:#173a33;border-color:var(--up);color:#80cbc4}
+#panel .yon-sec button.aktif[data-yon="short"]{background:#3a2327;border-color:var(--down);color:#ef9a9a}
+#panel .p-dugmeler{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+#panel .p-pnl{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:10px}
+#panel .p-pnl .buyuk{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+#panel .p-pnl .usd{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+#panel table td{padding:3px 4px}
+#panel svg text{font:11px -apple-system,Segoe UI,Roboto,sans-serif}
+@media (max-width:980px){#alan{flex-direction:column}#panel{width:auto;max-height:none}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;padding:6px 16px;color:var(--dim);font-size:12px}
+.legend i{display:inline-block;width:20px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(520px,100%),1fr));gap:12px;padding:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+.card h2{font-size:15px;margin:0 0 8px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}th{color:var(--dim);font-weight:500}
+tr.secili td{background:#241a2b}
+.up{color:var(--up)}.down{color:var(--down)}.warn{color:#ffca28}.sup{color:var(--sup)}.res{color:var(--res)}
+.note{color:var(--dim);font-size:12px;margin-top:8px}
+/* ICT sekmesi: EQH/EQL renkleri koyu zeminde renk körlüğü simülasyonuyla doğrulandı (ΔE 27+);
+   killzone renksiz gri, çünkü kutu bağlamdır, veri serisi değil */
+:root{--eqh:#c98500;--eql:#3987e5;--kz:rgba(230,232,236,.22);--iyi:#0ca30c;--kotu:#d03b3b}
+.karolar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.karo{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+.karo .bas{color:var(--dim);font-size:12px}
+.karo .deger{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin:2px 0}
+.karo .alt{color:var(--dim);font-size:12px;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.sw.eqh{background:var(--eqh)}.sw.eql{background:var(--eql)}
+.durum{font-size:12px;font-weight:600;padding:1px 8px;border-radius:10px;white-space:nowrap}
+.durum.iyi{background:rgba(12,163,12,.16);color:#6fdc6f}.durum.kotu{background:rgba(208,59,59,.18);color:#f19a9a}
+.durum.bos{color:var(--dim);font-weight:400;padding:1px 0}
+.legend .kutu{display:inline-block;width:18px;height:10px;border:1px solid var(--kz);background:rgba(230,232,236,.05);vertical-align:middle;margin-right:6px}
+.legend .ok{display:inline-block;margin-right:6px;letter-spacing:2px}
+#ict-tablo th:nth-child(2),#ict-tablo td:nth-child(2),#ict-tablo th:nth-child(4),#ict-tablo td:nth-child(4),
+#ict-tablo th:nth-child(5),#ict-tablo td:nth-child(5){text-align:left}
+#video-tablo th:nth-child(2),#video-tablo td:nth-child(2),#video-tablo th:nth-child(3),#video-tablo td:nth-child(3),
+#video-tablo th:nth-child(7),#video-tablo td:nth-child(7){text-align:left}
+details.kavram{margin-top:10px;color:var(--dim);font-size:12px}
+details.kavram summary{cursor:pointer;color:var(--text)}
+details.kavram table{width:auto;margin:6px 0;font-size:12px}
+details.kavram th,details.kavram td{text-align:left;padding-right:28px}
+details.kavram p{margin:6px 0}
+</style></head><body>
+<div id="acilis">Grafik yükleniyor… ilk açılışta 60 günlük veri indiriliyor, 10-20 saniye sürebilir.</div>
+<div id="hata-kutu"></div>
+<header>
+  <h1 id="sembol">…</h1><span class="big" id="fiyat">…</span><span class="rozet" id="canli">bağlanıyor</span>
+  <span class="coin-sec"><input id="sembol-gir" list="sembol-liste" placeholder="coin, örn. ARUSDT" autocomplete="off" spellcheck="false">
+    <button id="sembol-ac">Aç</button><span id="sembol-durum" class="dim"></span></span>
+  <datalist id="sembol-liste"></datalist>
+  <span id="sapma"></span>
+  <span class="dim" id="zaman"></span><span class="dim" id="benzer"></span>
+</header>
+<div class="kontrol sekme" id="sekmeler">
+  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="ict">ICT (killzone, EQH/EQL, PO3)</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button>
+</div>
+<div class="kontrol" id="tahmin-kontrol">
+  <span class="dim">Geçmiş isabet çizgisi:</span>
+  <span id="ufuk-dugmeler"></span>
+  <span class="dim" style="margin-left:12px">|</span>
+  <button id="aralik-dugme">Aralığı göster</button>
+  <span class="dim" style="margin-left:12px">|</span>
+  <button id="keskin-dugme" title="Morun ortası kaç benzer andan hesaplansın">Keskinlik: medyan</button>
+  <button id="mum-dugme" title="Fiyat mum grafiği mi çizgi mi gösterilsin">Mum grafiği</button>
+</div>
+<div class="kontrol" id="poz-form">
+  <b>Pozisyonum:</b>
+  <select id="poz-yon"><option value="long">Long</option><option value="short">Short</option></select>
+  <label class="dim">Giriş fiyatı <input id="poz-giris" type="text" inputmode="decimal" style="width:110px"></label>
+  <label class="dim">Saat <input id="poz-saat" type="text" inputmode="numeric" placeholder="şimdi" style="width:64px"></label>
+  <label class="dim">Kaldıraç <input id="poz-lev" type="text" inputmode="decimal" style="width:56px"></label>
+  <label class="dim">Teminat $ <input id="poz-teminat" type="text" inputmode="decimal" style="width:70px"></label>
+  <button id="poz-kaydet">Kaydet</button> <button id="poz-sil">Temizle</button> <span class="warn" id="poz-hata"></span>
+  <span class="dim">Kaldıraç sayfadaki bütün ROI hesaplarına uygulanır.</span>
+  <label class="dim" style="margin-left:10px">Tahmin ufku (dk) <input id="ufuk-gir" type="text" inputmode="numeric" style="width:56px"></label>
+  <button id="ufuk-kaydet">Uygula</button>
+</div>
+<div class="poz-bilgi" id="poz-bilgi"></div>
+<div id="alan"><div id="chart"></div>
+<aside id="panel" class="kart-panel gizli">
+  <h2>Strateji paneli</h2>
+  <div class="p-bas">Coin</div>
+  <div class="p-satir"><input id="p-coin" list="sembol-liste" autocomplete="off" spellcheck="false"><button id="p-coin-ac">Aç</button></div>
+  <div class="p-durum">
+    <div><div class="p-bas">Trend (SSL, 5 dk)</div><b id="p-trend">–</b></div>
+    <div><div class="p-bas">Echo, ~4 saat</div><b id="p-echo">–</b></div>
+    <div class="genis"><div class="p-bas">Sistem ne diyor</div><b id="p-eylem">–</b><div class="dim" id="p-eylem-not" style="font-size:12px;margin-top:2px"></div></div>
+  </div>
+  <div class="p-pnl"><div class="p-bas">Pozisyon K/Z (Binance formülü, işaret fiyatı)</div>
+    <div class="buyuk" id="p-roi">–</div><div class="usd" id="p-usd"></div></div>
+  <div class="yon-sec"><button data-yon="long">LONG</button><button data-yon="short">SHORT</button></div>
+  <div class="p-form">
+    <label>Giriş fiyatı<input id="p-giris" inputmode="decimal"></label>
+    <label>Kaldıraç<input id="p-lev" inputmode="decimal"></label>
+    <label>Stop loss<input id="p-sl" inputmode="decimal"></label>
+    <label>Take profit<input id="p-tp" inputmode="decimal"></label>
+    <label>Teminat $<input id="p-teminat" inputmode="decimal"></label>
+    <label>Saat<input id="p-saat" inputmode="numeric" placeholder="şimdi"></label>
+  </div>
+  <div class="p-dugmeler"><button id="p-doldur" title="Giriş = şu anki fiyat; TP/SL = Echo'nun tepesi/dibi, yoksa en yakın direnç/destek">Sistemden doldur</button>
+    <button id="p-kaydet">Kaydet</button><button id="p-sil">Temizle</button></div>
+  <div class="warn" id="p-hata" style="margin:-4px 0 8px;font-size:12px"></div>
+  <div class="p-bas">Risk cetveli (ROI %)</div>
+  <svg id="p-cetvel" viewBox="0 0 312 74" width="100%" height="74" role="img" aria-label="Likidasyon, stop, giriş, şimdi ve hedefin ROI olarak yerleri"></svg>
+  <table id="p-ozet" style="margin-top:6px"></table>
+  <div class="note" id="p-not"></div>
+</aside></div>
+<div class="legend kart-ict gizli">
+  <span><i style="border-color:#e6e8ec"></i>gerçek fiyat</span>
+  <span><b class="kutu"></b>killzone — kutu, o seansın en yüksek–en düşük aralığı</span>
+  <span><i style="border-color:var(--eqh)"></i>EQH eşit tepeler (üstte biriken stoplar)</span>
+  <span><i style="border-color:var(--eql)"></i>EQL eşit dipler (altta biriken stoplar)</span>
+  <span>düz = hâlâ açık · <i style="border-color:var(--dim);border-top-style:dashed;width:14px"></i>kesikli = süpürüldü, süpürüldüğü yerde biter</span>
+  <span><i style="border-color:#8b93a3;border-top-style:dotted"></i>gün açılışı 07:00 (PO3)</span>
+  <span><b class="ok">▼▲</b>süpürüp geri döndü = ICT girişi (✓ tuttu, ✗ tutmadı, … 60 dk dolmadı) · <b class="ok">●</b> delip geçti</span>
+</div>
+<div class="legend kart-panel gizli">
+  <span><i style="border-color:#26a69a;border-top-width:6px"></i><i style="border-color:#ef5350;border-top-width:6px;margin-left:-4px"></i>1 dakikalık mumlar</span>
+  <span><i style="border-color:#26a69a;border-top-width:3px"></i><i style="border-color:#ef5350;border-top-width:3px;margin-left:-4px"></i>trend çizgisi: HMA 200, SSL rengiyle (yeşil / kırmızı / gri)</span>
+  <span><i style="border-color:#ffb300;border-top-style:dashed"></i>Echo tahmini (~4 saat)</span>
+  <span><b class="kutu" style="border-color:rgba(224,64,251,.45);background:rgba(224,64,251,.12)"></b>%80 aralık — fiyatın 10'da 8 kaldığı bant (testte %77–83 tuttu)</span>
+  <span><i style="border-color:rgba(224,64,251,.8)"></i>bandın ortası (medyan)</span>
+  <span><i style="border-color:#4fc3f7"></i>en yakın destek · <i style="border-color:#ffb74d;border-top-style:dashed;margin-left:4px"></i>direnç</span>
+  <span><i style="border-color:#3987e5;border-top-width:2px"></i>giriş · <i style="border-color:#ef5350;border-top-style:dashed;margin-left:4px"></i>SL · <i style="border-color:#26a69a;border-top-style:dashed;margin-left:4px"></i>TP · <i style="border-color:#8b93a3;border-top-style:dotted;margin-left:4px"></i>likidasyon</span>
+</div>
+<div class="legend kart-video gizli">
+  <span><i style="border-color:#26a69a"></i><i style="border-color:#ef5350;margin-left:-4px"></i><i style="border-color:#8b93a3;margin-left:-4px"></i>fiyat SSL rengiyle: yeşil yükseliş, kırmızı düşüş, gri kanal içi ("beyaz sinyal")</span>
+  <span><i style="border-color:rgba(230,232,236,.35)"></i>HMA 200 baz çizgisi</span>
+  <span><i style="border-color:#ffb300;border-top-style:dashed"></i>Echo tahmini: sonraki 50 mum (5 dk'lık, ~4 saat)</span>
+  <span><i style="border-color:rgba(255,179,0,.45);border-top-style:dotted"></i>son sinyal anında çizilen Echo — silinmez, beyazla arası = sapma</span>
+  <span><b class="ok">▼▲</b>Echo onaylı sinyal (✓ hedef, ✗ stop/likidasyon, ⏱ süre doldu, … açık) · <b class="ok">●</b> Echo ters baktı, geçersiz</span>
+  <span><i style="border-color:#26a69a;border-top-style:dashed"></i><i style="border-color:#ef5350;border-top-style:dashed;margin-left:-4px"></i>açık sinyalin TP / SL'si</span>
+</div>
+<div class="legend kart-tahmin">
+  <span><i style="border-color:#e6e8ec"></i>gerçek fiyat</span>
+  <span><i style="border-color:#e040fb"></i>şu anki tahmin (<b id="takip-saat">–</b>) — fiyatın ucundan başlar, her 5 dk yenilenir</span>
+  <span><i style="border-color:rgba(224,64,251,.38)"></i>soluk mor: en son dondurulan mor (15 dk'da bir yenilenir) — üstteki sapma buna göre</span>
+  <span><i style="border-color:rgba(206,147,216,.75);border-top-style:dashed"></i>eski tahminler, her <b class="ufuk-dk">60</b> dk'da bir, uç uca — beyazla arası = sapma</span>
+  <span class="gecmis-lej"><i style="border-color:rgba(206,147,216,.8);border-top-style:dashed"></i>her an için <b id="lej-ufuk">60</b> dk önceden söylenmiş değer — geçmişi gösterir, ileriye bakmaz</span>
+  <span class="aralik-lej"><i style="border-color:rgba(224,64,251,.5);border-top-style:dotted"></i>%80 aralık (tahminlerin 10'da 8'i bu bandın içinde kaldı)</span>
+  <span><i style="border-color:var(--res);border-top-style:dashed"></i>direnç</span>
+  <span><i style="border-color:var(--sup);border-top-style:dashed"></i>destek</span>
+</div>
+<div class="grid">
+  <div class="card kart-formasyon gizli" style="grid-column:1/-1">
+    <h2>Formasyonlar — bu coinde son bulunanlar</h2>
+    <div class="note" style="margin:0 0 8px">15 klasik yöntem aynı anda taranıyor. Her satırın yanındaki <b>isabet</b>,
+      o formasyonun 40 coinde 200 günde ölçülmüş yön tutturma oranı (5 dakikalık mum, 1 saat tutma).
+      Rastgele giriş <b id="frm-rast">49</b>% tutturuyor — bu sayının altındaki her formasyon rastgeleden kötü demektir.</div>
+    <table id="frm-tablo"></table>
+    <div class="note" id="frm-not"></div>
+  </div>
+  <div class="card kart-formasyon gizli" style="grid-column:1/-1">
+    <h2>Ölçüm: hangi yöntem ne kadar tutuyor</h2>
+    <table id="frm-olcum"></table>
+    <div class="note">İki yarı, 200 günün ilk ve ikinci yarısı — bir yöntemin gerçek olması için ikisinde de rastgelenin
+      üstünde olması gerekir. "Net" sütunu komisyon ve kayma (<b id="frm-mal">0.18</b>%) düşüldükten sonraki ortalama;
+      hepsi negatif olduğu için hiçbiri tek başına işlem kuralı değildir.</div>
+  </div>
+  <div class="card kart-tarayici gizli" style="grid-column:1/-1">
+    <h2>Tarayıcı — bütün coinlerin şu anki durumu</h2>
+    <div class="note" style="margin:0 0 10px">Bu tablo <b>tahmin yapmaz.</b> Her coinin son 24 saatte ne kadar oynadığını gösterir ve
+      <b>geçmişte aynı durumda olan coinlerin</b> sonraki 4 ve 24 saatte ne yaptığını sayar
+      (<span id="tar-taban">–</span>). Sağdaki "yukarı" sütunu %50 civarındaysa o durumda yön yazı-turadır.
+      "Likidasyon" sütunu, o durumdaki bir coinde <b id="tar-lev">20</b>x ile pozisyon açanların kaçının tasfiye olduğudur — asıl bakman gereken sayı budur.</div>
+    <div class="kontrol" style="padding:0 0 8px">
+      <button data-tar="yukselen" class="aktif">En çok yükselen</button>
+      <button data-tar="dusen">En çok düşen</button>
+      <button data-tar="fon">Fonlama uç</button>
+      <button data-tar="hacim">Hacim</button>
+      <span class="dim" id="tar-saat"></span>
+    </div>
+    <table id="tar-tablo"></table>
+    <div class="note">Günlük hacmi 5M USDT altındaki coinler listelenmez (likidite yok, kayma büyük).
+      Satıra tıklayınca o coin bütün sekmelerde açılır. Fonlama pozitifse long'lar short'lara ödüyor (kalabalık long), negatifse tersi.</div>
+  </div>
+  <div class="card kart-video gizli" style="grid-column:1/-1"><h2>Video sistemi: SSL Hybrid + Echo — şu an</h2>
+    <div class="karolar" id="video-karolar"></div>
+    <h2>Görünen aralıktaki sinyaller</h2>
+    <table id="video-tablo"></table>
+    <div class="note">Kurallar (videodaki gibi, 5 dakikalık mumlar): kırmızıdan sonra ilk yeşil kapanış = long, yeşilden sonra ilk kırmızı = short (arada gri olabilir).
+      Echo aynı yöne bakmıyorsa geçersiz. TP = Echo'nun tepesi (biraz öncesi, yolun %90'ı), SL = Echo'nun tepeden önceki dibi; dip yoksa son 10 mumun en düşüğü/yükseği.
+      50 mum (~4 saat) içinde TP/SL olmazsa kapanışta çıkılır. K/Z: 12$ teminat, sunucu kaldıracı, komisyon+kayma %0.18, izole likidasyon dahil.</div>
+    <div class="note">Geriye dönük test (aynı kod, 2.6 yıl, 5 dk): LSK, AR, SOL, DOGE — ilk ve ikinci yarı, <b>8 dönemin 8'i zararda</b>.
+      Kazanan işlem %28–32, işlem başı −0.37$ ile −0.57$ arası (20x, 12$). Stop, hedeften 2.5 kat sık vuruluyor. İzlemek için; sinyal olarak kullanma.</div></div>
+  <div class="card kart-ict gizli" style="grid-column:1/-1"><h2>ICT — şu an</h2>
+    <div class="karolar" id="ict-karolar"></div>
+    <h2>Son 24 saatteki süpürmeler</h2>
+    <table id="ict-tablo"></table>
+    <div class="note">"Sonuç": ICT girişinden sonraki 60 dakikada beklenen yöndeki en büyük hareket, ters yöndekinden büyükse <b>tuttu</b>. Hangisinin önce geldiği 5 dakikalık mumlardan bilinemez; stop önce patlamış olabilir.</div>
+    <div class="note" id="ict-test"></div>
+    <details class="kavram"><summary>Bu kavramlar ne?</summary>
+      <table>
+        <tr><th>Killzone</th><th>TR saati</th><th>NY saati</th></tr>
+        <tr><td>Asya</td><td>01:00 – 03:00</td><td>18:00 – 20:00</td></tr>
+        <tr><td>Londra</td><td>09:00 – 12:00</td><td>02:00 – 05:00</td></tr>
+        <tr><td>NY AM</td><td>14:00 – 17:00</td><td>07:00 – 10:00</td></tr>
+        <tr><td>NY PM</td><td>20:30 – 23:00</td><td>13:30 – 16:00</td></tr>
+      </table>
+      <p><b>Killzone:</b> ICT'nin "hacim ve oynaklığın geldiği saatler" dediği pencereler. Grafikte kutu, o seansın en yüksek ve en düşük fiyatını çevreler.</p>
+      <p><b>EQH / EQL:</b> birbirine %0.15'ten yakın iki tepe (EQH) ya da dip (EQL). Noktalar o iki tepe/dip. Arkasında stop emirleri biriktiği varsayılır; fiyatın oraya gidip "süpürmesi" beklenir.</p>
+      <p><b>Süpürme:</b> seviyenin delinmesi. Aynı 5 dakikalık mum seviyenin içine geri kapanırsa "geri döndü" — ICT'ye göre giriş budur (EQH'de short, EQL'de long). Kapanmazsa "delip geçti", giriş sayılmaz.</p>
+      <p><b>PO3 / gün açılışı:</b> ICT günü New York gece yarısı (TR 07:00) açar. Önce toplama, sonra ters yöne manipülasyon, sonra asıl yönde dağıtım beklenir. Açılışın üstü "premium", altı "discount" bölgesi sayılır.</p>
+    </details></div>
+  <div class="card kart-tahmin"><h2>Tahmin karnesi — son 24 saat</h2><table id="karne"></table>
+    <div class="note">Tahmin iyi ayarlıysa "%80 bant içinde" ≈ %80, "%50 bant içinde" ≈ %50 olmalı. Yön isabeti %50 civarındaysa yön tahmini yazı-turadan farksızdır. "Ort. hata" dört sütun: morun ortasını bütün benzer anlardan (medyan), en yakın 50'den, en yakın 8'den hesaplayınca çıkan hatalar ve "fiyat değişmez" demenin hatası; kalın olan seçili mod. Keskinlik düğmesi mor çizgiyi hareketlendirir ama 4 coinde 90 günlük ölçümde hata naifin %101'inden (medyan) %104'e (50) ve %113'e (8) çıktı, yön isabeti üçünde de %50 civarında kaldı. Bant (%80 aralık) her zaman bütün benzer anlardan hesaplanır.</div></div>
+  <div class="card kart-tahmin"><h2>Önümüzdeki <span class="ufuk-dk">60</span> dakika</h2><table id="dilim"></table>
+    <div class="note">"Yukarıda" = o saatte fiyatın şimdikinden yüksek olduğu benzer anların oranı. Aralık, benzer anların %80'inin kaldığı bant.</div></div>
+  <div class="card kart-tahmin"><h2>Destek / direnç</h2><table id="sr"></table>
+    <div class="note">Test = seviyeye denk gelen tepe/dip sayısı (1s + 15dk fraktal). "Değme" = benzer anlarda fiyatın bu seviyeye tahmin ufku (<span class="ufuk-dk">60</span> dk) içinde ulaşma oranı.</div></div>
+  <div class="card kart-tahmin"><h2>Senaryolar (en yakın destek ↔ direnç)</h2><table id="sen"></table>
+    <div class="note" id="sennot"></div></div>
+</div>
+<script>
+// ---- başlangıç ayarları (tarayıcıda saklanır) ----
+let SEMBOL = "LSKUSDT", KALDIRAC = 20, UFUK = 120, MMR = 0.015;
+let TABAN = { kovalar: {} }, OLCUM = {};
+try {
+  SEMBOL = localStorage.getItem("sembol") || SEMBOL;
+  KALDIRAC = Number(localStorage.getItem("kaldirac")) || KALDIRAC;
+  UFUK = Number(localStorage.getItem("ufuk_dk")) || UFUK;
+} catch (e) {}
+
+function hataGoster(mesaj) {
+  const k = document.getElementById("hata-kutu");
+  if (!k) return;
+  k.style.display = "block";
+  k.textContent = (k.textContent ? k.textContent + "\n" : "") + mesaj;
+  const a = document.getElementById("acilis");
+  if (a) a.textContent = "Bir sorun çıktı, ayrıntı aşağıda.";
+}
+window.addEventListener("error", e => hataGoster("HATA: " + (e.message || e) + (e.filename ? "  (" + e.filename.split("/").pop() + ":" + e.lineno + ")" : "")));
+window.addEventListener("unhandledrejection", e => hataGoster("HATA: " + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+if (typeof LightweightCharts === "undefined") hataGoster("Grafik kütüphanesi yüklenemedi. İnternet bağlantısını kontrol et (cdn.jsdelivr.net erişilebilir olmalı).");
+if (typeof Tahminci === "undefined") hataGoster("hesap.js yüklenemedi. index.html ile hesap.js aynı klasörde olmalı.");
+const LC = LightweightCharts, LS = LC.LineStyle;
+const $ = id => document.getElementById(id);
+let sekme = "tahmin";
+try { sekme = localStorage.getItem("sekme") || "tahmin"; } catch (e) {}
+let V = null, ilk = true, sonBar = null, cizgiler = [], ws = null;
+// Keskin mod: morun ortası kaç benzer andan hesaplanıyor. 0 = hepsi (medyan), 1 = en yakın 50, 2 = en yakın 8.
+// Sadece Tahmin sekmesini etkiler; ICT, video ve panel sekmeleri her zaman medyanı kullanır.
+// Tahmin sekmesinde fiyat: mum grafiği mi, çizgi mi (panel sekmesi her zaman mum kullanır)
+let mumModu = true;
+try { mumModu = localStorage.getItem("mumModu") !== "0"; } catch (e) {}
+const anaSeri = () => (sekme === "panel" || (sekme === "tahmin" && mumModu)) ? mumSeri : mum;
+let keskinMod = 0;
+try { keskinMod = Number(localStorage.getItem("keskin")) || 0; } catch (e) {}
+const keskinAlan = () => ["p50", "p50o", "p50k"][keskinMod];
+const keskinDeger = () => ["value", "vo", "vk"][keskinMod];
+let ufuk = 0;                          // 0 = geçmiş isabet çizgisi gizli (varsayılan)
+try { ufuk = Number(localStorage.getItem("ufuk2")) || 0; } catch (e) {}
+
+const chart = LC.createChart(document.getElementById("chart"), {
+  autoSize: true,
+  layout: { background: { color: "#0f1115" }, textColor: "#c9ced8" },
+  grid: { vertLines: { color: "#1c2029" }, horzLines: { color: "#1c2029" } },
+  timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 6 },
+  crosshair: { mode: 0 },
+});
+let ictCizgi = [];
+// eski tahminler: kırmızı kesikli, silinmez. Fiyat çizgisinin altında kalsın diye önceden oluşturulur.
+const kirmiziOzellik = { color: "rgba(206,147,216,.75)", lineWidth: 2, lineStyle: LS.Dashed, priceLineVisible: false,
+  lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null };
+const zincirSeri = Array.from({ length: 40 }, () => chart.addLineSeries(kirmiziOzellik));
+const zincirSerisi = j => { while (zincirSeri.length <= j) zincirSeri.push(chart.addLineSeries(kirmiziOzellik)); return zincirSeri[j]; };
+// soluk mor: en son dondurulan mor (her 15 dk'da bir). Fiyat çizgisinin altında kalsın diye önceden oluşturulur;
+// ölçeği etkilemez. Üstteki sapma bu mora göre hesaplanır.
+const HAYALET_ALFA = [.5];
+const hayaletSeri = HAYALET_ALFA.map(a => chart.addLineSeries({ color: `rgba(224,64,251,${a})`, lineWidth: 2,
+  priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null }));
+// video sekmesi: HMA 200 baz (fiyatın altında)
+const videoBaz = chart.addLineSeries({ color: "rgba(230,232,236,.35)", lineWidth: 1, priceLineVisible: false,
+  lastValueVisible: false, crosshairMarkerVisible: false, visible: false });
+// gerçek fiyat: 1 dakikalık kapanışlardan tek çizgi
+const mum = chart.addLineSeries({ color: "#e6e8ec", lineWidth: 2, priceLineVisible: true, lastValueVisible: true,
+  crosshairMarkerVisible: true });
+const cizgi = (renk, kalinlik, stil, etiket, olcege_katma) => chart.addLineSeries({ color: renk, lineWidth: kalinlik, lineStyle: stil,
+  priceLineVisible: false, lastValueVisible: etiket, crosshairMarkerVisible: false,
+  ...(olcege_katma ? { autoscaleInfoProvider: () => null } : {}) });
+// geçmiş tahminlerin geniş bantları fiyat eksenini ezmesin: ölçeğe katılmazlar
+const gecmis = { p90: cizgi("rgba(206,147,216,.35)", 1, LS.Dotted, false, true), p10: cizgi("rgba(206,147,216,.35)", 1, LS.Dotted, false, true),
+  p50: cizgi("rgba(206,147,216,.8)", 2, LS.Dashed, false) };
+const koni = { p90: cizgi("rgba(224,64,251,.5)", 1, LS.Dotted, true), p50: cizgi("#e040fb", 3, LS.Solid, true),
+  p10: cizgi("rgba(224,64,251,.5)", 1, LS.Dotted, true) };
+
+const videoEcho = cizgi("#ffb300", 2, LS.Dashed, true);
+videoEcho.applyOptions({ visible: false });
+// sinyal anındaki Echo: soluk sarı noktalı, silinmez (bir sonraki geçerli sinyale kadar); ölçeği etkilemez
+const videoEchoIz = cizgi("rgba(255,179,0,.45)", 2, LS.Dotted, false, true);
+videoEchoIz.applyOptions({ visible: false });
+
+// aralık çizgileri varsayılan kapalı; düğmeyle açılır
+let aralikAcik = false;
+try { aralikAcik = localStorage.getItem("aralik") === "1"; } catch (e) {}
+function aralikUygula() {
+  for (const s of [koni.p10, koni.p90, gecmis.p10, gecmis.p90]) s.applyOptions({ visible: aralikAcik });
+  $("aralik-dugme").textContent = aralikAcik ? "Aralığı gizle" : "Aralığı göster";
+  $("aralik-dugme").classList.toggle("aktif", aralikAcik);
+  document.querySelectorAll(".aralik-lej").forEach(e => e.style.display = aralikAcik ? "" : "none");
+}
+
+const f = x => Number(x).toFixed(V && V.price < 1 ? 5 : 4);
+const sg = x => (x >= 0 ? "+" : "") + Number(x).toFixed(0);
+const yuzde = x => x === null || x === undefined ? "–" : "%" + x.toFixed(0);
+
+function gecmisCiz() {
+  const g = ufuk ? V.gecmis[String(ufuk)] : null;
+  for (const q of ["p10", "p50", "p90"]) gecmis[q].setData(g ? g[q] : []);
+  $("lej-ufuk").textContent = ufuk * 5;
+  document.querySelectorAll(".gecmis-lej").forEach(e => e.style.display = ufuk ? "" : "none");
+  document.querySelectorAll(".ufuk-dk").forEach(e => e.textContent = V.ufuk_dk);
+  document.querySelectorAll("button[data-ufuk]").forEach(b => b.classList.toggle("aktif", Number(b.dataset.ufuk) === ufuk));
+  document.querySelectorAll("#karne tr[data-ufuk]").forEach(r => r.classList.toggle("secili", Number(r.dataset.ufuk) === ufuk));
+}
+$("aralik-dugme").onclick = () => {
+  aralikAcik = !aralikAcik;
+  try { localStorage.setItem("aralik", aralikAcik ? "1" : "0"); } catch (e) {}
+  aralikUygula();
+};
+aralikUygula();
+
+const KESKIN_AD = ["medyan (bütün benzer anlar)", "en yakın 50", "en yakın 8"];
+function keskinUygula() {
+  $("keskin-dugme").textContent = "Keskinlik: " + KESKIN_AD[keskinMod];
+  $("keskin-dugme").classList.toggle("aktif", keskinMod > 0);
+  if (V && sekme === "tahmin") ciz();
+}
+$("keskin-dugme").onclick = () => {
+  keskinMod = (keskinMod + 1) % 3;
+  try { localStorage.setItem("keskin", keskinMod); } catch (e) {}
+  keskinUygula();
+};
+keskinUygula();
+
+function mumUygula() {
+  $("mum-dugme").textContent = mumModu ? "Mum grafiği" : "Çizgi grafiği";
+  $("mum-dugme").classList.toggle("aktif", mumModu);
+  if (V) { sekmeUygula(); ciz(); }
+}
+$("mum-dugme").onclick = () => {
+  mumModu = !mumModu;
+  try { localStorage.setItem("mumModu", mumModu ? "1" : "0"); } catch (e) {}
+  mumUygula();
+};
+mumUygula();
+
+// Zincirdeki her eski tahmin tamamen kırmızı kesikli. Süren blok tahmininin sadece geçen kısmı kırmızı
+// (sapma buradan okunur); geleceği taze mor gösterir.
+function zincirCiz() {
+  const Z = V.zincir || [], simdi = sonBar ? sonBar.time : 0, ilkMum = V.mumlar[0].time;
+  let aktif = null, tahminSimdi = null, gecenAdet = 0;
+  const isaretler = [];
+  Z.forEach((z, j) => {
+    const P = z[keskinAlan()], seri = zincirSerisi(j);
+    const sonMu = j === Z.length - 1 && P[P.length - 1].time > simdi;
+    if (!sonMu) {
+      seri.setData(P);
+    } else {
+      aktif = z;
+      const gecen = P.filter(p => p.time <= simdi), kalan = P.filter(p => p.time > simdi);
+      if (gecen.length && kalan.length) {
+        const a = gecen[gecen.length - 1], b = kalan[0];
+        tahminSimdi = a.value + (b.value - a.value) * (simdi - a.time) / (b.time - a.time);
+        if (simdi > a.time) gecen.push({ time: simdi, value: tahminSimdi });
+      }
+      gecenAdet = gecen.length;
+      seri.setData(gecen);
+    }
+    if (P[0].time >= ilkMum) isaretler.push({ time: P[0].time, position: "aboveBar", shape: "circle",
+      color: "rgba(206,147,216,.9)", text: z.saat });
+  });
+  for (let j = Z.length; j < zincirSeri.length; j++) zincirSeri[j].setData([]);
+  const halan = keskinDeger();
+  hayaletSeri.forEach((sr, j) => sr.setData(((V.hayalet || [])[j] || []).map(p => ({ time: p.time, value: p[halan] }))));
+  // Mor = en son 5 dakikalık kapanışta yapılan taze tahmin, şu anki fiyata taşınmış (tahmin yüzde cinsinden).
+  // Blok başındaki tahminin kalan kısmı çizilmez: fiyat o zamandan beri kaymış olabilir; 120 dk ufukta
+  // blok başı tahmininin hatası %2.44, aynı hedef için taze tahminin %1.61 ölçüldü.
+  const K = V.koni[keskinAlan()];
+  if (K.length && sonBar) {
+    const oran = sonBar.close / V.koni.p50[0].value;
+    const tasi = seri => [{ time: simdi, value: sonBar.close }]
+      .concat(seri.filter(p => p.time > simdi).map(p => ({ time: p.time, value: p.value * oran })));
+    koni.p50.setData(tasi(K));
+    koni.p10.setData(tasi(V.koni.p10));      // bant her zaman bütün benzer anlardan; keskinlikten etkilenmez
+    koni.p90.setData(tasi(V.koni.p90));
+  } else { koni.p50.setData([]); koni.p10.setData([]); koni.p90.setData([]); }
+  anaSeri().setMarkers(isaretler);
+  (anaSeri() === mum ? mumSeri : mum).setMarkers([]);
+  $("takip-saat").textContent = K.length ? `şimdi → ${new Date(K[K.length - 1].time * 1000).toISOString().slice(11, 16)}` : "benzer an yetersiz";
+  const H = (V.hayalet || [])[0];
+  if (H && sonBar && sonBar.time > H[0].time) {
+    const son = H.filter(p => p.time <= simdi).pop(), sonra = H.find(p => p.time > simdi);
+    const deger = sonra ? son.value + (sonra.value - son.value) * (simdi - son.time) / (sonra.time - son.time) : son.value;
+    const fark = (sonBar.close / deger - 1) * 100;
+    $("sapma").innerHTML = `Sapma: fiyat ${saatYaz(H[0].time + 60)} morunun <b class="${fark >= 0 ? "up" : "down"}">%${Math.abs(fark).toFixed(2)} ` +
+      `${fark >= 0 ? "üstünde" : "altında"}</b> <span class="dim">(${aktifLev()}x'te ROI farkı ${sg(fark * aktifLev())})</span>`;
+  } else if (aktif && tahminSimdi && gecenAdet > 1) {
+    const fark = (sonBar.close / tahminSimdi - 1) * 100;
+    $("sapma").innerHTML = `Sapma: fiyat ${aktif.saat} tahmininin <b class="${fark >= 0 ? "up" : "down"}">%${Math.abs(fark).toFixed(2)} ` +
+      `${fark >= 0 ? "üstünde" : "altında"}</b> <span class="dim">(${aktifLev()}x ROI ${sg(fark * aktifLev())})</span>`;
+  } else {
+    $("sapma").innerHTML = `<span class="dim">Sapma: ${aktif ? aktif.saat + " tahmini yeni başladı" : "yeni tahmin bekleniyor"}</span>`;
+  }
+}
+
+function ufukDugmeleri() {
+  if (ufuk && !V.ufuklar.includes(ufuk)) ufuk = 0;
+  const alan = $("ufuk-dugmeler");
+  const imza = V.ufuklar.join(",");
+  if (alan.dataset.imza === imza) return;
+  alan.dataset.imza = imza;
+  alan.innerHTML = '<button data-ufuk="0">gizli</button> ' + V.ufuklar.map(h => `<button data-ufuk="${h}">${h * 5 >= 120 && h * 5 % 60 === 0 ? h * 5 / 60 + " saat" : h * 5 + " dk"} önceden</button>`).join(" ");
+  alan.querySelectorAll("button").forEach(b => b.onclick = () => {
+    ufuk = Number(b.dataset.ufuk);
+    try { localStorage.setItem("ufuk2", ufuk); } catch (e) {}
+    gecmisCiz();
+  });
+}
+
+// ---- kullanıcının pozisyonu: giriş çizgisi + canlı ROI satırı
+let poz = null, pozCizgi = [];
+// Pozisyon her coin için ayrı saklanır ("pozisyon:LSKUSDT"). Coin bilgisi olmayan eski kayıt, ilk açılan coine taşınır.
+function pozYukle(sym) {
+  try {
+    const p = JSON.parse(localStorage.getItem("pozisyon:" + sym) || "null");
+    if (p) return p;
+    const eski = JSON.parse(localStorage.getItem("pozisyon") || "null");
+    if (eski && (!eski.symbol || eski.symbol === sym)) {
+      eski.symbol = sym;
+      localStorage.setItem("pozisyon:" + sym, JSON.stringify(eski));
+      localStorage.removeItem("pozisyon");
+      return eski;
+    }
+  } catch (e) {}
+  return null;
+}
+function pozSakla() {
+  try {
+    if (poz) { poz.symbol = V.symbol; localStorage.setItem("pozisyon:" + V.symbol, JSON.stringify(poz)); }
+    else localStorage.removeItem("pozisyon:" + V.symbol);
+  } catch (e) {}
+}
+const sayi = id => parseFloat(String($(id).value).trim().replace(",", "."));
+
+// Giriş noktası: tam giriş fiyatında (giriş çizgisinin üstünde) üçgen + etiket. Kütüphanenin işaretleri mumun
+// fiyatına yapıştığı için eklentiyle çizilir. Long yeşil ▲, short kırmızı ▼. Saati olmayan eski kayıtta çizilmez.
+class GirisKatman {
+  constructor() {
+    this._g = [{ zOrder: () => "top", renderer: () => ({ draw: h => h.useMediaCoordinateSpace(s => this._ciz(s.context, s.mediaSize)) }) }];
+  }
+  attached({ chart, series, requestUpdate }) { this.chart = chart; this.seri = series; this._iste = requestUpdate; }
+  detached() { this._iste = null; }
+  updateAllViews() {}
+  paneViews() { return poz && poz.zaman && V ? this._g : []; }
+  yenile() { if (this._iste) this._iste(); }
+  _ciz(ctx, boyut) {
+    const x = this.chart.timeScale().timeToCoordinate(poz.zaman - (poz.zaman % 60));
+    const y = this.seri.priceToCoordinate(poz.giris);
+    if (x === null || y === null || y < 0 || y > boyut.height) return;
+    const long = poz.yon === "long", renk = long ? "#26a69a" : "#ef5350", r = 8;
+    ctx.save();
+    ctx.beginPath();
+    if (long) { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r * .8); ctx.lineTo(x - r, y + r * .8); }
+    else { ctx.moveTo(x, y + r); ctx.lineTo(x + r, y - r * .8); ctx.lineTo(x - r, y - r * .8); }
+    ctx.closePath();
+    ctx.fillStyle = renk; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = "#0f1115"; ctx.stroke();
+    const yazi = `${long ? "LONG" : "SHORT"} ${f(poz.giris)} · ${saatYaz(poz.zaman)}`;
+    ctx.font = "600 12px -apple-system,Segoe UI,Roboto,sans-serif";
+    const w = ctx.measureText(yazi).width + 12, h = 20;
+    const lx = x + r + 6 + w > boyut.width ? x - r - 6 - w : x + r + 6;
+    const ly = long ? y + 6 : y - 6 - h;
+    ctx.fillStyle = renk; ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(lx, ly, w, h, 4); else ctx.rect(lx, ly, w, h);
+    ctx.fill();
+    ctx.fillStyle = "#0f1115"; ctx.fillText(yazi, lx + 6, ly + 14);
+    ctx.restore();
+  }
+}
+const girisKatman = new GirisKatman();
+mum.attachPrimitive(girisKatman);
+
+// "15:42" -> grafik zamanı (bugün; o saat henüz gelmediyse dün)
+function saatZamani(metin) {
+  const m = /^(\d{1,2})[:.](\d{2})$/.exec((metin || "").trim());
+  if (!m || !sonBar || +m[1] > 23 || +m[2] > 59) return null;
+  let t = sonBar.time - (sonBar.time % 86400) + (+m[1]) * 3600 + (+m[2]) * 60;
+  if (t > sonBar.time) t -= 86400;
+  return t;
+}
+const saatYaz = t => new Date(t * 1000).toISOString().slice(11, 16);
+
+function pozCizgileri() {
+  pozCizgi.forEach(x => x.s.removePriceLine(x.l));
+  pozCizgi = [];
+  girisKatman.yenile();
+  if (typeof girisKatman2 !== "undefined") girisKatman2.yenile();
+  if (!poz || !V) return;
+  const k = poz.yon === "long" ? 1 : -1, S = anaSeri();
+  pozCizgi.push({ s: S, l: S.createPriceLine({ price: poz.giris, color: k > 0 ? "#26a69a" : "#ef5350", lineWidth: 2,
+    lineStyle: LS.Solid, axisLabelVisible: true, title: `GİRİŞ ${poz.yon.toUpperCase()} ${poz.lev}x` }) });
+  const liq = poz.giris * (1 - (1 / poz.lev - V.mmr) * k);
+  if (liq > 0) pozCizgi.push({ s: S, l: S.createPriceLine({ price: liq, color: "#8b93a3", lineWidth: 1, lineStyle: LS.Dotted,
+    axisLabelVisible: true, title: "likidasyon (izole)" }) });
+}
+
+// Binance ROI formülü: gerçekleşmemiş K/Z ÷ (miktar × İŞARET fiyatı ÷ kaldıraç)
+// Miktar, girişte koyulan teminattan bulunur: miktar = teminat × kaldıraç ÷ giriş fiyatı
+let isaretFiyat = null;
+function pozHesap(p) {
+  const k = p.yon === "long" ? 1 : -1;
+  const fiyat = isaretFiyat || sonBar.close;
+  const miktar = p.teminat * p.lev / p.giris;
+  const usd = miktar * (fiyat - p.giris) * k;
+  return { fiyat, usd, roi: usd / (miktar * fiyat / p.lev) * 100 };
+}
+function pozBilgi() {
+  if (sekme === "panel") panelCanli();
+  if (!poz || !sonBar) { $("poz-bilgi").innerHTML = ""; return; }
+  const { fiyat, usd, roi } = pozHesap(poz);
+  const r = roi >= 0 ? "up" : "down", i = x => (x >= 0 ? "+" : "");
+  $("poz-bilgi").innerHTML = `<span class="poz-etiket ${poz.yon}">${poz.yon.toUpperCase()} ${poz.lev}x</span>` +
+    `giriş <b>${f(poz.giris)}</b>${poz.zaman ? ` <span class="dim">(${saatYaz(poz.zaman)})</span>` : ""} <span class="dim">→ ${isaretFiyat ? "işaret fiyatı" : "şimdi"}</span> <b>${f(fiyat)}</b> <span class="dim">·</span> ` +
+    `<b class="${r}">ROI ${i(roi)}${roi.toFixed(2)}%</b> <b class="${r}">(${i(usd)}${usd.toFixed(2)}$)</b> ` +
+    `<span class="dim">${poz.teminat}$ teminatla · Binance formülü</span>`;
+}
+
+// İşaret fiyatı akışı (saniyede 1) — Binance ROI'si bununla hesaplanır
+let isaretWs = null;
+function isaretBaglan() {
+  if (isaretWs) { isaretWs.onclose = null; isaretWs.close(); }
+  const w = isaretWs = new WebSocket(`wss://fstream.binance.com/market/ws/${V.symbol.toLowerCase()}@markPrice@1s`);
+  w.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m && m.p) { isaretFiyat = +m.p; pozBilgi(); }
+  };
+  w.onclose = () => { isaretFiyat = null; setTimeout(isaretBaglan, 3000); };
+}
+
+// Formdaki kaldıraç (pozisyon kayıtlıysa) sayfadaki tüm ROI hesaplarında kullanılır
+const aktifLev = () => (poz ? poz.lev : V.lev);
+const levOran = () => aktifLev() / V.lev;          // sunucu V.lev ile hesapladı; ROI kaldıraçla doğrusal
+
+function formDoldur() {
+  $("poz-yon").value = poz ? poz.yon : "long";
+  $("poz-giris").value = poz ? poz.giris : "";
+  $("poz-saat").value = poz && poz.zaman ? saatYaz(poz.zaman) : "";
+  $("poz-giris").placeholder = sonBar ? String(sonBar.close) : "örn. 0.477461";
+  $("poz-lev").value = poz ? poz.lev : V.lev;
+  $("poz-teminat").value = poz ? poz.teminat : 12;
+}
+["poz-giris", "poz-saat", "poz-lev", "poz-teminat"].forEach(id => $(id).addEventListener("keydown", e => {
+  if (e.key === "Enter") $("poz-kaydet").click();
+}));
+$("poz-kaydet").onclick = () => {
+  const giris = sayi("poz-giris"), lev = sayi("poz-lev"), teminat = sayi("poz-teminat");
+  if (!(giris > 0)) { $("poz-hata").textContent = "Giriş fiyatını yaz (örnek 0.477461)"; return; }
+  if (!(lev >= 1 && lev <= 125)) { $("poz-hata").textContent = "Kaldıraç 1 ile 125 arası olmalı"; return; }
+  const saatMetin = $("poz-saat").value.trim();
+  const zaman = saatMetin ? saatZamani(saatMetin) : (sonBar ? sonBar.time : null);
+  if (saatMetin && zaman === null) { $("poz-hata").textContent = "Saati 15:42 gibi yaz (boş bırakırsan şimdi sayılır)"; return; }
+  const ayni = poz && poz.yon === $("poz-yon").value;     // SL/TP panelden geldiyse yön aynıyken korunur
+  poz = { yon: $("poz-yon").value, giris, lev, teminat: teminat > 0 ? teminat : 12, zaman,
+          sl: ayni ? poz.sl : null, tp: ayni ? poz.tp : null };
+  pozSakla();
+  $("poz-saat").value = zaman ? saatYaz(zaman) : "";
+  $("poz-hata").innerHTML = `<span class="up">kaydedildi ✓</span>` + (zaman && !saatMetin
+    ? ` <span class="dim">giriş saati ${saatYaz(zaman)} (şimdi) alındı; daha önce girdiysen Saat'e yazıp tekrar kaydet</span>` : "");
+  pozCizgileri();
+  if (V) ciz();
+};
+$("poz-sil").onclick = () => {
+  poz = null;
+  pozSakla();
+  $("poz-hata").textContent = "";
+  pozCizgileri();
+  if (V) { formDoldur(); ciz(); }
+};
+
+// ---- ICT katmanı. ICT göstergelerindeki gibi (TFO Killzones & Pivots): killzone = seansın en yüksek–en düşük
+// kutusu; likidite seviyesi oluştuğu yerden süpürüldüğü yere kadar uzar, süpürülünce biter.
+// Tam genişlik fiyat çizgisi yerine lightweight-charts eklentisi (series primitive) ile çizilir.
+const EQ_RENK = { EQH: "#c98500", EQL: "#3987e5" };
+let kutular = [];
+class IctKatman {
+  constructor() {
+    this.acik = false;
+    const ciz = kat => ({ draw: hedef => hedef.useMediaCoordinateSpace(s => this._ciz(s.context, s.mediaSize, kat)) });
+    this._gorunumler = [{ zOrder: () => "bottom", renderer: () => ciz("alt") },
+                        { zOrder: () => "top", renderer: () => ciz("ust") }];
+  }
+  attached({ chart, series, requestUpdate }) { this.chart = chart; this.seri = series; this._iste = requestUpdate; }
+  detached() { this._iste = null; }
+  updateAllViews() {}
+  paneViews() { return this.acik && V && V.ict ? this._gorunumler : []; }
+  yenile() { if (this._iste) this._iste(); }
+  // zaman -> x. Görünen veriden önceki zaman sol kenarın dışına, son mumdan sonrası son mumun x'ine düşer.
+  _x(t) {
+    const x = this.chart.timeScale().timeToCoordinate(t);
+    if (x !== null) return x;
+    if (t < V.mumlar[0].time) return -20;
+    return sonBar ? this.chart.timeScale().timeToCoordinate(sonBar.time) : null;
+  }
+  _ciz(ctx, boyut, kat) {
+    const I = V.ict, y = p => this.seri.priceToCoordinate(p);
+    ctx.save();
+    ctx.font = "11px -apple-system,Segoe UI,Roboto,sans-serif";
+    if (kat === "alt") {
+      for (const k of kutular) {
+        const x1 = this._x(k.bas), x2 = this._x(k.son), y1 = y(k.yuk), y2 = y(k.dus);
+        if (x1 === null || x2 === null || y1 === null || y2 === null || x2 < 0) continue;
+        ctx.fillStyle = "rgba(230,232,236,.05)";
+        ctx.fillRect(x1, y1, Math.max(1, x2 - x1), y2 - y1);
+        ctx.strokeStyle = "rgba(230,232,236,.22)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.round(x1) + .5, Math.round(y1) + .5, Math.max(1, Math.round(x2 - x1)), Math.round(y2 - y1));
+        // etiket panonun üstünde, kutu hizasında; kutudan etikete ince kesikli bağ
+        const lx = Math.max(4, x1 + 4);
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath(); ctx.moveTo(Math.round(x1) + .5, 18); ctx.lineTo(Math.round(x1) + .5, y1); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#8b93a3";
+        ctx.fillText(k.ad + (k.suruyor ? " · sürüyor" : ""), lx, 14);
+      }
+      return ctx.restore();
+    }
+    const sag = boyut.width;
+    if (I.gun_acilis) {
+      const x1 = this._x(I.gun_acilis.zaman), yy = y(I.gun_acilis.fiyat);
+      if (x1 !== null && yy !== null) {
+        ctx.strokeStyle = "#8b93a3"; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+        ctx.beginPath(); ctx.moveTo(Math.max(0, x1), Math.round(yy) + .5); ctx.lineTo(sag, Math.round(yy) + .5); ctx.stroke();
+        ctx.setLineDash([]);
+        if (x1 >= 0) { ctx.fillStyle = "#8b93a3"; ctx.fillText("07:00 açılış", x1 + 4, yy - 5); }
+      }
+    }
+    for (const e of I.eq) {
+      const renk = EQ_RENK[e.tur], yy = y(e.fiyat), x1 = this._x(e.uclar[0].zaman);
+      const x2 = e.bitis ? this._x(e.bitis) : sag;
+      if (yy === null || x1 === null || x2 === null || x2 < 0) continue;
+      ctx.strokeStyle = renk;
+      ctx.globalAlpha = e.supuruldu ? .6 : 1;
+      ctx.lineWidth = e.supuruldu ? 1 : 2;
+      ctx.setLineDash(e.supuruldu ? [5, 4] : []);
+      ctx.beginPath(); ctx.moveTo(Math.max(0, x1), Math.round(yy) + .5); ctx.lineTo(x2, Math.round(yy) + .5); ctx.stroke();
+      ctx.setLineDash([]);
+      // havuzu oluşturan iki tepe/dip: 8px nokta, zemin renginde 2px halka
+      for (const u of e.uclar) {
+        const ux = this._x(u.zaman), uy = y(u.fiyat);
+        if (ux === null || uy === null || ux < 0) continue;
+        ctx.beginPath(); ctx.arc(ux, uy, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = renk; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = "#0f1115"; ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+}
+const ictKatman = new IctKatman();
+mum.attachPrimitive(ictKatman);
+
+// killzone kutuları: görünen 1 dakikalık mumlardan her seansın en yüksek / en düşük fiyatı
+function kutulariHesapla() {
+  kutular = [];
+  if (!V || !V.ict) return;
+  const bars = V.mumlar.slice();
+  if (sonBar && sonBar.time > bars[bars.length - 1].time) bars.push(sonBar);
+  for (const b of bars) {
+    const dk = Math.floor(b.time / 60) % 1440, gun = b.time - (b.time % 86400);
+    const z = V.ict.killzone.find(z => dk >= z.bas && dk < z.bit);
+    if (!z) continue;
+    const bas = gun + z.bas * 60;
+    let k = kutular.find(k => k.bas === bas);
+    if (!k) kutular.push(k = { ad: z.ad, bas, bit: gun + z.bit * 60, son: b.time, yuk: b.high, dus: b.low });
+    k.son = b.time; k.yuk = Math.max(k.yuk, b.high); k.dus = Math.min(k.dus, b.low);
+  }
+  const simdi = sonBar ? sonBar.time : 0;
+  kutular.forEach(k => k.suruyor = simdi >= k.bas && simdi < k.bit);
+}
+
+// killzone durumu: şu an içinde miyiz, değilsek sıradaki hangisi, kaç dakika kaldı
+function killzoneDurumu(t) {
+  const dk = Math.floor(t / 60) % 1440, Z = V.ict.killzone;
+  const ic = Z.find(z => dk >= z.bas && dk < z.bit);
+  const saat = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const sure = d => d >= 60 ? `${Math.floor(d / 60)} sa ${d % 60} dk` : `${d} dk`;
+  if (ic) return { deger: ic.ad, alt: `${saat(ic.bas)}–${saat(ic.bit)} · bitişe ${sure(ic.bit - dk)}` };
+  const sira = Z.map(z => ({ z, fark: (z.bas - dk + 1440) % 1440 })).sort((a, b) => a.fark - b.fark)[0];
+  return { deger: "Dışında", alt: `sıradaki ${sira.z.ad} ${saat(sira.z.bas)} · ${sure(sira.fark)} sonra` };
+}
+
+// fiyata bağlı karolar: her fiyat güncellemesinde yenilenir
+function ictKarolar() {
+  if (!V || !V.ict || !sonBar) return;
+  const I = V.ict, p = sonBar.close, LEV = aktifLev();
+  const uz = x => (x / p - 1) * 100;
+  const kz = killzoneDurumu(sonBar.time);
+  const acilis = I.gun_acilis;
+  const havuz = tur => I.eq.filter(e => !e.supuruldu && e.tur === tur && (tur === "EQH" ? e.fiyat > p : e.fiyat < p))
+    .sort((a, b) => Math.abs(a.fiyat - p) - Math.abs(b.fiyat - p))[0];
+  const hk = (tur, e) => e
+    ? { deger: `<span class="sw ${tur.toLowerCase()}"></span>${f(e.fiyat)}`,
+        alt: `${uz(e.fiyat) >= 0 ? "+" : "−"}%${Math.abs(uz(e.fiyat)).toFixed(2)} · ROI ${sg(uz(e.fiyat) * LEV)} (${LEV}x) · ${e.onay}'da oluştu` }
+    : { deger: `<span class="sw ${tur.toLowerCase()}"></span>yok`, alt: "görünen aralıkta süpürülmemiş havuz yok" };
+  const G = I.supurmeler.filter(x => x.geri);
+  const tuttu = G.filter(x => x.tuttu === true).length, tutmadi = G.filter(x => x.tuttu === false).length;
+  const bekl = G.filter(x => x.tuttu === null).length;
+  const karo = (bas, d) => `<div class="karo"><div class="bas">${bas}</div><div class="deger">${d.deger}</div><div class="alt">${d.alt}</div></div>`;
+  $("ict-karolar").innerHTML =
+    karo("Killzone", kz) +
+    karo("Gün açılışı 07:00", acilis
+      ? { deger: f(acilis.fiyat), alt: `fiyat açılışın %${Math.abs(uz(acilis.fiyat)).toFixed(2)} ${p >= acilis.fiyat ? "üstünde (premium)" : "altında (discount)"}` }
+      : { deger: "–", alt: "bugünün açılışı henüz yok" }) +
+    karo("Üstteki en yakın açık EQH", hk("EQH", havuz("EQH"))) +
+    karo("Alttaki en yakın açık EQL", hk("EQL", havuz("EQL"))) +
+    karo("ICT girişleri, son 24 saat", {
+      deger: G.length ? `<span class="durum iyi">✓ ${tuttu}</span> <span class="durum kotu">✗ ${tutmadi}</span>` : "–",
+      alt: G.length ? `${tuttu} tuttu, ${tutmadi} tutmadı${bekl ? `, ${bekl} tanesinin 60 dk'sı dolmadı` : ""}` : "süpürüp geri dönen olmadı" });
+}
+
+function ictCiz() {
+  const ictAktif = sekme === "ict";
+  ictCizgi.forEach(c => mum.removePriceLine(c));
+  ictCizgi = [];
+  ictKatman.acik = ictAktif;
+  if (!ictAktif || !V.ict) { ictKatman.yenile(); return; }
+  const I = V.ict;
+  kutulariHesapla();
+  // sağ eksende sadece açık havuzların ve açılışın fiyatı; çizgilerin kendisini eklenti çiziyor
+  for (const e of I.eq.filter(e => !e.supuruldu)) ictCizgi.push(mum.createPriceLine({ price: e.fiyat, color: EQ_RENK[e.tur],
+    lineVisible: false, axisLabelVisible: true, title: e.tur }));
+  if (I.gun_acilis) ictCizgi.push(mum.createPriceLine({ price: I.gun_acilis.fiyat, color: "#8b93a3",
+    lineVisible: false, axisLabelVisible: true, title: "açılış" }));
+  ictKatman.yenile();
+  ictKarolar();
+  const sonuc = x => !x.geri ? '<span class="durum bos">giriş değil</span>'
+    : x.tuttu === null ? '<span class="durum bos">60 dk dolmadı</span>'
+    : x.tuttu ? '<span class="durum iyi">✓ tuttu</span>' : '<span class="durum kotu">✗ tutmadı</span>';
+  tablo("ict-tablo", ["Saat", "Havuz", "Seviye", "Ne oldu", "ICT beklentisi", "Sonraki 60 dk yukarı / aşağı", "Sonuç"],
+    I.supurmeler.slice().reverse().map(x => `<tr><td>${x.saat}</td><td><span class="sw ${x.tur.toLowerCase()}"></span>${x.tur}</td>
+      <td>${f(x.fiyat)}</td><td>${x.geri ? "süpürüp geri döndü" : "delip geçti"}</td>
+      <td>${!x.geri ? '<span class="dim">–</span>' : x.tur === "EQH" ? '<span class="down">short</span>' : '<span class="up">long</span>'}</td>
+      <td><span class="up">+${Math.max(0, x.sonra_yuk).toFixed(1)}%</span> / <span class="down">${Math.min(0, x.sonra_dus).toFixed(1)}%</span></td>
+      <td>${sonuc(x)}</td></tr>`));
+  if (!I.supurmeler.length) $("ict-tablo").innerHTML += '<tr><td colspan="7" class="dim">Son 24 saatte süpürme yok.</td></tr>';
+  $("ict-test").innerHTML = "Geriye dönük test: EQH/EQL süpürme dönüşü 10 coinde 40 günde, killzone filtresi dahil 32 ayarla denendi — " +
+    "<b>hiçbiri kârlı çıkmadı</b> (kazanç faktörü 0.42–0.55). PO3 da aynı. Bu sekme izlemek ve öğrenmek için; sinyal olarak kullanma.";
+}
+
+// süpürme işaretleri: geri dönenler beklenen yöne ok (EQH ▼, EQL ▲), delip geçenler nokta
+function ictIsaretleri() {
+  const ilk = V.mumlar[0].time;
+  return (V.ict ? V.ict.supurmeler : []).filter(x => x.zaman >= ilk).map(x => ({
+    time: x.zaman, color: EQ_RENK[x.tur],
+    position: x.tur === "EQH" ? "aboveBar" : "belowBar",
+    shape: !x.geri ? "circle" : x.tur === "EQH" ? "arrowDown" : "arrowUp",
+    text: !x.geri ? "" : x.tuttu === null ? "…" : x.tuttu ? "✓" : "✗" }))
+    .sort((a, b) => a.time - b.time);
+}
+
+// ---- Video sekmesi: SSL Hybrid rengi + HMA 200 baz + Echo tahmini + sinyaller
+const SSL_RENK = { "1": "#26a69a", "-1": "#ef5350", "0": "#8b93a3" };
+let videoRenk = new Map(), videoCizgi = [];
+// 1 dakikalık nokta, içinde olduğu 5 dakikalık mumun SSL rengini alır; süren (henüz kapanmamış) mum son rengi alır
+function renk1m(t) {
+  if (!V || !V.video || !V.video.renk.length) return null;
+  const d = videoRenk.get(t - (t % 300));
+  return SSL_RENK[String(d !== undefined ? d : V.video.trend)];
+}
+function fiyatCiz() {
+  if (!V) return;
+  const boya = sekme === "video" && V.video;
+  mum.setData(V.mumlar.map(m => {
+    const r = boya ? renk1m(m.time) : null;
+    return r ? { time: m.time, value: m.close, color: r } : { time: m.time, value: m.close };
+  }));
+}
+function videoIsaretleri() {
+  const ilk = V.mumlar[0].time;
+  return (V.video ? V.video.sinyaller : []).filter(x => x.time >= ilk).map(x => {
+    const long = x.yon > 0;
+    if (!x.gecerli) return { time: x.time, position: long ? "belowBar" : "aboveBar", shape: "circle", color: "#8b93a3", text: "" };
+    const iz = x.sonuc === "hedef" ? "✓" : x.sonuc === "stop" || x.sonuc === "likidasyon" ? "✗" : x.sonuc ? "⏱" : "…";
+    return { time: x.time, position: long ? "belowBar" : "aboveBar", shape: long ? "arrowUp" : "arrowDown",
+      color: long ? "#26a69a" : "#ef5350", text: `${long ? "LONG" : "SHORT"} ${iz}` };
+  }).sort((a, b) => a.time - b.time);
+}
+function videoCiz() {
+  const aktif = sekme === "video" && V && V.video;
+  videoBaz.applyOptions({ visible: !!aktif });
+  videoEcho.applyOptions({ visible: !!aktif });
+  videoEchoIz.applyOptions({ visible: !!aktif });
+  videoCizgi.forEach(c => mum.removePriceLine(c));
+  videoCizgi = [];
+  if (!aktif) return;
+  const W = V.video, K = W.karne;
+  videoRenk = new Map(W.renk.map(([t, d]) => [t, d]));
+  videoBaz.setData(W.baz);
+  videoEcho.setData(W.echo);
+  videoEchoIz.setData(W.echo_iz || []);
+  // açık (henüz sonuçlanmamış) son geçerli sinyalin TP/SL'si
+  const acik = W.sinyaller.filter(x => x.gecerli && !x.sonuc).pop();
+  if (acik) {
+    videoCizgi.push(mum.createPriceLine({ price: acik.tp, color: "#26a69a", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: "TP (Echo tepe)" }));
+    videoCizgi.push(mum.createPriceLine({ price: acik.sl, color: "#ef5350", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: "SL" }));
+  }
+  const son = W.sinyaller.filter(x => x.gecerli).pop();
+  const trendAd = { "1": "Yeşil (yükseliş)", "-1": "Kırmızı (düşüş)", "0": "Gri (kanal içi)" }[String(W.trend)];
+  const karo = (bas, d) => `<div class="karo"><div class="bas">${bas}</div><div class="deger">${d.deger}</div><div class="alt">${d.alt}</div></div>`;
+  const sonucAd = x => x.sonuc === "hedef" ? '<span class="durum iyi">✓ hedef</span>' : x.sonuc === "stop" ? '<span class="durum kotu">✗ stop</span>'
+    : x.sonuc === "likidasyon" ? '<span class="durum kotu">✗ likidasyon</span>' : x.sonuc ? '<span class="durum bos">⏱ süre doldu</span>' : '<span class="durum bos">… açık</span>';
+  $("video-karolar").innerHTML =
+    karo("Trend (SSL, 5 dk)", { deger: `<span style="color:${SSL_RENK[String(W.trend)]}">${trendAd}</span>`, alt: "HMA 200 baz kanalına göre" }) +
+    karo("Echo, sonraki ~4 saat", { deger: `${W.echo_degisim >= 0 ? "Yukarı" : "Aşağı"} ${W.echo_degisim >= 0 ? "+" : "−"}%${Math.abs(W.echo_degisim).toFixed(2)}`,
+      alt: "tek bir benzer pencerenin kopyası" }) +
+    karo("Son geçerli sinyal", son ? { deger: `${son.yon > 0 ? "LONG" : "SHORT"} ${son.saat} ${sonucAd(son)}`,
+      alt: `giriş ${f(son.giris)} · TP ${f(son.tp)} · SL ${f(son.sl)}` } : { deger: "–", alt: "görünen aralıkta yok" }) +
+    karo("Sinyal anındaki Echo'ya göre", W.echo_iz && W.echo_iz.length
+      ? { deger: '<span id="video-sapma">–</span>', alt: `${W.echo_iz_saat} sinyalinde çizilen sarı (soluk noktalı) şu an için ne diyordu` }
+      : { deger: "–", alt: "görünen aralıkta geçerli sinyal yok" }) +
+    karo(`Son ${K.gun} gün, bu coin (${K.lev}x, 12$)`, K.islem ? { deger: `${K.islem} işlem · <span class="${K.ort >= 0 ? "up" : "down"}">${K.ort >= 0 ? "+" : ""}${K.ort.toFixed(2)}$</span>/işlem`,
+      alt: `kazanan %${K.kazanan.toFixed(0)} · hedef ${K.hedef}, stop ${K.stop}, likidasyon ${K.likid} · toplam ${K.toplam >= 0 ? "+" : ""}${K.toplam.toFixed(0)}$` }
+      : { deger: "–", alt: "sinyal yok" });
+  tablo("video-tablo", ["Saat", "Yön", "Echo", "Giriş", "TP", "SL", "Sonuç", "K/Z"],
+    W.sinyaller.slice().reverse().map(x => `<tr><td>${x.saat}</td><td class="${x.yon > 0 ? "up" : "down"}">${x.yon > 0 ? "LONG" : "SHORT"}</td>
+      <td>${x.gecerli ? "onayladı" : '<span class="dim">ters baktı</span>'}</td><td>${f(x.giris)}</td>
+      <td>${x.gecerli ? f(x.tp) : "–"}</td><td>${x.gecerli ? f(x.sl) : "–"}</td>
+      <td>${x.gecerli ? sonucAd(x) : '<span class="durum bos">geçersiz</span>'}</td>
+      <td class="${x.kz > 0 ? "up" : x.kz < 0 ? "down" : ""}">${x.kz === null ? "–" : (x.kz >= 0 ? "+" : "") + x.kz.toFixed(2) + "$"}</td></tr>`));
+  if (!W.sinyaller.length) $("video-tablo").innerHTML += '<tr><td colspan="8" class="dim">Görünen aralıkta sinyal yok.</td></tr>';
+  videoSapma();
+}
+// fiyat, sinyal anındaki Echo'nun şu anki değerinden ne kadar uzak; her fiyat güncellemesinde
+function videoSapma() {
+  const el = $("video-sapma"), E = V && V.video ? V.video.echo_iz : null;
+  if (!el || !E || !E.length || !sonBar) return;
+  const simdi = sonBar.time, a = E.filter(p => p.time <= simdi).pop(), b = E.find(p => p.time > simdi);
+  if (!a) return;
+  if (!b) {                              // Echo'nun ömrü bitti: bitiş anındaki sapma
+    const g = V.mumlar.filter(m => m.time <= a.time).pop();
+    const fb = g ? (g.close / a.value - 1) * 100 : null;
+    el.innerHTML = fb === null ? '<span class="dim">Echo süresi doldu</span>'
+      : `<span class="dim" style="font-size:14px">süresi doldu · bitişte fiyat</span> <span class="${fb >= 0 ? "up" : "down"}">%${Math.abs(fb).toFixed(2)} ${fb >= 0 ? "üstündeydi" : "altındaydı"}</span>`;
+    return;
+  }
+  const deger = a.value + (b.value - a.value) * (simdi - a.time) / (b.time - a.time);
+  const fark = (sonBar.close / deger - 1) * 100;
+  el.innerHTML = `fiyat <span class="${fark >= 0 ? "up" : "down"}">%${Math.abs(fark).toFixed(2)} ${fark >= 0 ? "üstünde" : "altında"}</span> ` +
+    `<span class="dim" style="font-size:12px;font-weight:400">(${aktifLev()}x'te ROI farkı ${sg(fark * aktifLev())})</span>`;
+}
+
+// ---- Coin seçici: sunucu yok, yeni coinin verisi doğrudan Binance'ten çekilip burada hesaplanır
+async function sembolDegistir(girdi) {
+  let s = (girdi || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!s) return;
+  if (!s.endsWith("USDT")) s += "USDT";
+  if (V && s === V.symbol) { $("sembol-durum").textContent = ""; return; }
+  if (SEMBOLLER.length && !SEMBOLLER.includes(s)) {
+    $("sembol-durum").innerHTML = `<span class="warn">${s} Binance vadeli işlemlerde yok</span>`; return;
+  }
+  if (ws) { ws.onclose = null; ws.close(); ws = null; }
+  if (isaretWs) { isaretWs.onclose = null; isaretWs.close(); isaretWs = null; }
+  ilk = true; sonBar = null; isaretFiyat = null; poz = null; sonMesaj = Date.now();
+  SEMBOL = s; TAH = null;
+  try { localStorage.setItem("sembol", s); } catch (e) {}
+  $("sembol-gir").value = "";
+  yukle();
+}
+$("ufuk-gir").value = UFUK;
+$("ufuk-kaydet").onclick = () => {
+  const u = Math.round(Number($("ufuk-gir").value) / 5) * 5;
+  if (!(u >= 15 && u <= 1440)) { $("sembol-durum").innerHTML = '<span class="warn">ufuk 15-1440 dakika arası olmalı</span>'; return; }
+  UFUK = u; try { localStorage.setItem("ufuk_dk", u); } catch (e) {}
+  TAH = null; ilk = true; V = null; yukle();
+};
+$("sembol-ac").onclick = () => sembolDegistir($("sembol-gir").value);
+$("sembol-gir").addEventListener("keydown", e => { if (e.key === "Enter") sembolDegistir($("sembol-gir").value); });
+$("p-coin-ac").onclick = () => sembolDegistir($("p-coin").value);
+$("p-coin").addEventListener("keydown", e => { if (e.key === "Enter") sembolDegistir($("p-coin").value); });
+let SEMBOLLER = [];
+jget("/fapi/v1/exchangeInfo").then(d => {
+  SEMBOLLER = d.symbols.filter(x => x.contractType === "PERPETUAL" && x.quoteAsset === "USDT" && x.status === "TRADING")
+    .map(x => x.symbol).sort();
+  $("sembol-liste").innerHTML = SEMBOLLER.map(x => `<option value="${x}">`).join("");
+}).catch(() => {});
+
+// ---- Strateji paneli (4. sekme)
+// 1 dakikalık mumlar; beyaz fiyat çizgisi bu sekmede gizlenir
+const mumSeri = chart.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false,
+  wickUpColor: "#26a69a", wickDownColor: "#ef5350", visible: false });
+// trend çizgisi: HMA 200 baz, her nokta o 5 dakikalık mumun SSL rengiyle
+const trendCizgi = chart.addLineSeries({ color: "#8b93a3", lineWidth: 3, priceLineVisible: false,
+  lastValueVisible: false, crosshairMarkerVisible: false, visible: false });
+const panelEcho = cizgi("#ffb300", 2, LS.Dashed, true);
+panelEcho.applyOptions({ visible: false });
+// gelecek zaman ızgarası: tahminler 5 dakikalık noktalarda; boş 1 dakikalık noktalar eklenmezse gelecek 5 kat sıkışık görünür
+const izgara = chart.addLineSeries({ color: "rgba(0,0,0,0)", priceLineVisible: false, lastValueVisible: false,
+  crosshairMarkerVisible: false });
+
+// %80 bant (mor dolgu) + medyanı: tahmin sekmesindeki kalibre edilmiş aralık, şu anki fiyata taşınmış
+class BantKatman {
+  constructor() {
+    this.acik = false;
+    this._g = [{ zOrder: () => "bottom", renderer: () => ({ draw: h => h.useMediaCoordinateSpace(s => this._ciz(s.context)) }) }];
+  }
+  attached({ chart, series, requestUpdate }) { this.chart = chart; this.seri = series; this._iste = requestUpdate; }
+  detached() { this._iste = null; }
+  updateAllViews() {}
+  paneViews() { return this.acik && V && V.koni.p50.length && sonBar ? this._g : []; }
+  yenile() { if (this._iste) this._iste(); }
+  _ciz(ctx) {
+    const ts = this.chart.timeScale(), simdi = sonBar.time, oran = sonBar.close / V.koni.p50[0].value;
+    const nokta = S => [{ time: simdi, value: sonBar.close }].concat(S.filter(p => p.time > simdi).map(p => ({ time: p.time, value: p.value * oran })));
+    const xy = S => nokta(S).map(p => [ts.timeToCoordinate(p.time), this.seri.priceToCoordinate(p.value)]).filter(q => q[0] !== null && q[1] !== null);
+    const U = xy(V.koni.p90), A = xy(V.koni.p10), M = xy(V.koni.p50);
+    if (U.length < 2 || A.length < 2) return;
+    const yol = P => P.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.save();
+    ctx.beginPath(); yol(U); A.slice().reverse().forEach(([x, y]) => ctx.lineTo(x, y)); ctx.closePath();
+    ctx.fillStyle = "rgba(224,64,251,.12)"; ctx.fill();
+    ctx.strokeStyle = "rgba(224,64,251,.45)"; ctx.lineWidth = 1;
+    ctx.beginPath(); yol(U); ctx.stroke(); ctx.beginPath(); yol(A); ctx.stroke();
+    ctx.strokeStyle = "rgba(224,64,251,.8)"; ctx.lineWidth = 1.5; ctx.beginPath(); yol(M); ctx.stroke();
+    ctx.restore();
+  }
+}
+const bantKatman = new BantKatman();
+mumSeri.attachPrimitive(bantKatman);
+const girisKatman2 = new GirisKatman();
+mumSeri.attachPrimitive(girisKatman2);
+
+let panelYon = "long", panelCizgi = [];
+const pSayi = id => { const v = parseFloat(String($(id).value).trim().replace(",", ".")); return isFinite(v) && v > 0 ? v : null; };
+// formdaki (kaydedilmemiş olabilir) değerler: K/Z, cetvel ve çizgiler bunu gösterir
+function panelOku() {
+  return { yon: panelYon, giris: pSayi("p-giris"), lev: pSayi("p-lev") || V.lev, teminat: pSayi("p-teminat") || 12,
+           sl: pSayi("p-sl"), tp: pSayi("p-tp") };
+}
+function panelFormDoldur() {
+  panelYon = poz ? poz.yon : panelYon;
+  $("p-coin").value = V.symbol;
+  $("p-giris").value = poz ? poz.giris : "";
+  $("p-giris").placeholder = sonBar ? f(sonBar.close) : "";
+  $("p-lev").value = poz ? poz.lev : V.lev;
+  $("p-teminat").value = poz ? poz.teminat : 12;
+  $("p-sl").value = poz && poz.sl ? poz.sl : "";
+  $("p-tp").value = poz && poz.tp ? poz.tp : "";
+  $("p-saat").value = poz && poz.zaman ? saatYaz(poz.zaman) : "";
+  document.querySelectorAll("#panel .yon-sec button").forEach(b => b.classList.toggle("aktif", b.dataset.yon === panelYon));
+}
+const likidFiyat = P => P.giris * (1 - (1 / P.lev - V.mmr) * (P.yon === "long" ? 1 : -1));
+// Binance ROI'si o fiyatta: K/Z ÷ (miktar × fiyat ÷ kaldıraç)
+const roiFiyatta = (P, x) => (x - P.giris) * (P.yon === "long" ? 1 : -1) / x * P.lev * 100;
+
+function panelCizgileri() {
+  panelCizgi.forEach(c => mumSeri.removePriceLine(c));
+  panelCizgi = [];
+  if (sekme !== "panel" || !V) return;
+  const cz = (price, color, style, title, w = 1) => price && panelCizgi.push(mumSeri.createPriceLine({ price, color, lineWidth: w,
+    lineStyle: style, axisLabelVisible: true, title }));
+  if (V.destekler.length) cz(V.destekler[0].fiyat, "#4fc3f7", LS.Solid, "destek");
+  if (V.direncler.length) cz(V.direncler[0].fiyat, "#ffb74d", LS.Dashed, "direnç");
+  const P = panelOku();
+  if (P.giris) {
+    cz(P.giris, "#3987e5", LS.Solid, `GİRİŞ ${P.yon.toUpperCase()} ${P.lev}x`, 2);
+    cz(P.sl, "#ef5350", LS.Dashed, "SL");
+    cz(P.tp, "#26a69a", LS.Dashed, "TP");
+    cz(likidFiyat(P), "#8b93a3", LS.Dotted, "likidasyon");
+  }
+}
+
+// risk cetveli: likidasyon, stop, giriş (0), şimdi, hedef — hepsi ROI % ekseninde
+function cetvelCiz(P, roiSimdi) {
+  const svg = $("p-cetvel");
+  if (!P.giris) { svg.innerHTML = '<text x="156" y="40" text-anchor="middle" fill="#8b93a3">giriş fiyatı yaz</text>'; return; }
+  const liq = roiFiyatta(P, likidFiyat(P));
+  const nok = [{ ad: "likidasyon", roi: liq, renk: "#8b93a3", sira: 2 },
+    P.sl ? { ad: "SL", roi: roiFiyatta(P, P.sl), renk: "#ef5350", sira: 1 } : null,
+    { ad: "giriş", roi: 0, renk: "#3987e5", sira: 2 },
+    P.tp ? { ad: "TP", roi: roiFiyatta(P, P.tp), renk: "#26a69a", sira: 1 } : null].filter(Boolean);
+  const hepsi = nok.map(n => n.roi).concat(roiSimdi === null ? [] : [roiSimdi]);
+  const lo = Math.min(...hepsi), hi = Math.max(...hepsi), pay = (hi - lo) * .08 || 10;
+  const x = v => 14 + (v - lo + pay) / (hi - lo + 2 * pay) * 284;
+  const t = (v, y, metin, renk = "#c9ced8") => `<text x="${Math.max(24, Math.min(288, v))}" y="${y}" text-anchor="middle" fill="${renk}">${metin}</text>`;
+  let h = `<rect x="${x(lo - pay)}" y="34" width="${x(0) - x(lo - pay)}" height="8" rx="2" fill="rgba(239,83,80,.18)"/>` +
+          `<rect x="${x(0)}" y="34" width="${x(hi + pay) - x(0)}" height="8" rx="2" fill="rgba(38,166,154,.18)"/>`;
+  for (const n of nok) {
+    h += `<line x1="${x(n.roi)}" x2="${x(n.roi)}" y1="28" y2="48" stroke="${n.renk}" stroke-width="2"/>`;
+    h += n.sira === 1 ? t(x(n.roi), 24, `${n.ad} ${sg(n.roi)}%`) : t(x(n.roi), 62, `${n.ad} ${sg(n.roi)}%`, "#8b93a3");
+  }
+  if (roiSimdi !== null) {
+    h += `<circle cx="${x(roiSimdi)}" cy="38" r="6" fill="${roiSimdi >= 0 ? "#26a69a" : "#ef5350"}" stroke="#171a21" stroke-width="2"/>`;
+    h += t(x(roiSimdi), 10, `şimdi ${sg(roiSimdi)}%`, roiSimdi >= 0 ? "#80cbc4" : "#ef9a9a");
+  }
+  svg.innerHTML = h;
+}
+
+// fiyata bağlı kısımlar: K/Z, cetvel, özet tablo
+function panelCanli() {
+  if (!V || !sonBar) return;
+  const P = panelOku();
+  const K = P.giris ? pozHesap(P) : null;
+  const r = K && K.roi >= 0 ? "up" : "down", i = v => (v >= 0 ? "+" : "");
+  $("p-roi").innerHTML = K ? `<span class="${r}">${i(K.roi)}${K.roi.toFixed(2)}%</span>` : '<span class="dim">–</span>';
+  $("p-usd").innerHTML = K ? `<span class="${r}">${i(K.usd)}${K.usd.toFixed(2)} USDT</span> <span class="dim" style="font-size:12px;font-weight:400">${P.teminat}$ teminat · ${P.lev}x${poz ? "" : " · kaydedilmedi"}</span>` : "";
+  cetvelCiz(P, K ? K.roi : null);
+  if (!P.giris) { $("p-ozet").innerHTML = ""; $("p-not").textContent = ""; return; }
+  const k = P.yon === "long" ? 1 : -1, miktar = P.teminat * P.lev / P.giris;
+  const usdFiyatta = x => miktar * (x - P.giris) * k;
+  const liq = likidFiyat(P);
+  const satir = (ad, deger) => `<tr><td class="dim">${ad}</td><td>${deger}</td></tr>`;
+  const rr = P.sl && P.tp ? Math.abs(P.tp - P.giris) / Math.abs(P.giris - P.sl) : null;
+  $("p-ozet").innerHTML =
+    (rr ? satir("Risk : ödül", `1 : ${rr.toFixed(2)}`) : "") +
+    (P.sl ? satir("SL'de", `<span class="down">${f(P.sl)} · ROI ${sg(roiFiyatta(P, P.sl))}% · ${usdFiyatta(P.sl).toFixed(2)}$</span>`) : "") +
+    (P.tp ? satir("TP'de", `<span class="up">${f(P.tp)} · ROI ${sg(roiFiyatta(P, P.tp))}% · +${usdFiyatta(P.tp).toFixed(2)}$</span>`) : "") +
+    satir("Likidasyon (izole)", `${f(liq)} · %${(Math.abs(liq / sonBar.close - 1) * 100).toFixed(2)} uzakta`);
+  const uyar = [];
+  if (P.sl && (P.sl - liq) * k < 0) uyar.push("⚠ Stop likidasyonun ötesinde: önce likide olursun.");
+  if (P.sl && (P.sl - P.giris) * k > 0) uyar.push("⚠ Stop girişin yanlış tarafında.");
+  if (P.tp && (P.tp - P.giris) * k < 0) uyar.push("⚠ TP girişin yanlış tarafında.");
+  $("p-not").innerHTML = uyar.map(u => `<span class="warn">${u}</span>`).join("<br>");
+}
+
+// panel: gösterge durumu + çizgiler (30 sn'de bir ve sekme açılınca)
+function panelCiz() {
+  const aktif = sekme === "panel" && V;
+  // mum serisi Tahmin sekmesinde de kullanılabiliyor (mum modu); panelCiz onu kapatmasın
+  mumSeri.applyOptions({ visible: !!aktif || (sekme === "tahmin" && mumModu) });
+  trendCizgi.applyOptions({ visible: !!(aktif && V.video) });
+  panelEcho.applyOptions({ visible: !!(aktif && V.video) });
+  bantKatman.acik = !!aktif; bantKatman.yenile();
+  if (!aktif) { izgara.setData([]); panelCizgileri(); return; }
+  const W = V.video;
+  if (W) {
+    const R = new Map(W.renk.map(([t, d]) => [t, d]));
+    trendCizgi.setData(W.baz.map(p => ({ time: p.time, value: p.value, color: SSL_RENK[String(R.has(p.time - 240) ? R.get(p.time - 240) : W.trend)] })));
+    panelEcho.setData(W.echo);
+  }
+  // gelecek ızgarası: şimdiden tahminlerin bittiği yere kadar dakikada bir boş nokta
+  const son = Math.max(W && W.echo.length ? W.echo[W.echo.length - 1].time : 0, V.koni.p50.length ? V.koni.p50[V.koni.p50.length - 1].time : 0);
+  const z = [];
+  for (let t = sonBar.time + 60; t <= son + 300; t += 60) z.push({ time: t });
+  izgara.setData(z);
+  // gösterge durumu
+  const tr = W ? W.trend : 0, ec = W ? W.echo_degisim : 0;
+  $("p-trend").innerHTML = tr > 0 ? '<span class="up">✓ Yükseliş</span>' : tr < 0 ? '<span class="down">✗ Düşüş</span>' : '<span class="dim">– Kararsız (gri)</span>';
+  $("p-echo").innerHTML = ec >= 0 ? `<span class="up">↑ Yukarı +%${ec.toFixed(2)}</span>` : `<span class="down">↓ Aşağı −%${Math.abs(ec).toFixed(2)}</span>`;
+  $("p-eylem").innerHTML = tr > 0 && ec > 0 ? '<span class="up">AL (LONG) — ikisi de yukarı</span>'
+    : tr < 0 && ec < 0 ? '<span class="down">SAT (SHORT) — ikisi de aşağı</span>' : '<span class="dim">BEKLE — ikisi aynı yöne bakmıyor</span>';
+  const K = W ? W.karne : null;
+  $("p-eylem-not").innerHTML = K && K.islem ? `Bu kuralın bu coindeki son ${K.gun} günü: ${K.islem} işlem, kazanan %${K.kazanan.toFixed(0)}, ` +
+    `işlem başı <span class="${K.ort >= 0 ? "up" : "down"}">${K.ort >= 0 ? "+" : ""}${K.ort.toFixed(2)}$</span> (${K.lev}x, 12$).` : "";
+  $("p-giris").placeholder = sonBar ? f(sonBar.close) : "";
+  panelCizgileri();
+  panelCanli();
+}
+
+document.querySelectorAll("#panel .yon-sec button").forEach(b => b.onclick = () => {
+  panelYon = b.dataset.yon;
+  document.querySelectorAll("#panel .yon-sec button").forEach(x => x.classList.toggle("aktif", x === b));
+  panelCizgileri(); panelCanli();
+});
+["p-giris", "p-lev", "p-teminat", "p-sl", "p-tp"].forEach(id => $(id).addEventListener("input", () => { panelCizgileri(); panelCanli(); }));
+// Sistemden doldur: giriş = şu anki fiyat; TP = Echo'nun tepesinin %90'ı, SL = Echo'nun tepeden önceki dibi.
+// Echo o yönde değilse TP en yakın direnç/destek; dip girişin öbür tarafında değilse SL en yakın destek/direnç.
+$("p-doldur").onclick = () => {
+  if (!V || !sonBar) return;
+  const W = V.video, c = sonBar.close;
+  if (W && W.trend > 0 && W.echo_degisim > 0) panelYon = "long";
+  else if (W && W.trend < 0 && W.echo_degisim < 0) panelYon = "short";
+  const k = panelYon === "long" ? 1 : -1;
+  const yakinUst = V.direncler.length ? V.direncler[0].fiyat : null, yakinAlt = V.destekler.length ? V.destekler[0].fiyat : null;
+  let tp = null, sl = null;
+  if (W && W.echo.length > 1) {
+    const E = W.echo.slice(1).map(p => p.value * (c / W.echo[0].value));
+    let j = 0; E.forEach((v, n) => { if (v * k > E[j] * k) j = n; });
+    tp = c + 0.9 * (E[j] - c);
+    const dip = Math.min(...E.slice(0, j + 1).map(v => v * k)) * k;
+    if ((dip - c) * k < 0) sl = dip;
+  }
+  if (!tp || (tp - c) * k <= 0) tp = k > 0 ? yakinUst : yakinAlt;
+  if (!sl) sl = k > 0 ? yakinAlt : yakinUst;
+  $("p-giris").value = f(c); $("p-sl").value = sl ? f(sl) : ""; $("p-tp").value = tp ? f(tp) : ""; $("p-saat").value = "";
+  document.querySelectorAll("#panel .yon-sec button").forEach(b => b.classList.toggle("aktif", b.dataset.yon === panelYon));
+  $("p-hata").innerHTML = '<span class="dim">Dolduruldu, henüz kaydedilmedi. Binance\'te gerçekten girdiysen kendi giriş fiyatını yazıp Kaydet.</span>';
+  panelCizgileri(); panelCanli();
+};
+$("p-kaydet").onclick = () => {
+  const P = panelOku();
+  if (!P.giris) { $("p-hata").textContent = "Giriş fiyatını yaz"; return; }
+  if (!(P.lev >= 1 && P.lev <= 125)) { $("p-hata").textContent = "Kaldıraç 1 ile 125 arası olmalı"; return; }
+  const saatMetin = $("p-saat").value.trim();
+  let zaman = saatMetin ? saatZamani(saatMetin) : null;
+  if (saatMetin && zaman === null) { $("p-hata").textContent = "Saati 15:42 gibi yaz"; return; }
+  if (!zaman) zaman = poz && poz.giris === P.giris && poz.yon === P.yon && poz.zaman ? poz.zaman : sonBar.time;
+  poz = { ...P, zaman };
+  pozSakla();
+  $("p-hata").innerHTML = `<span class="up">kaydedildi ✓</span> <span class="dim">(${saatYaz(zaman)}) — diğer sekmelerde de görünür</span>`;
+  $("p-saat").value = saatYaz(zaman);
+  pozCizgileri(); formDoldur(); pozBilgi(); panelCizgileri(); panelCanli();
+};
+$("p-sil").onclick = () => {
+  poz = null; pozSakla();
+  $("p-hata").textContent = "";
+  panelFormDoldur(); pozCizgileri(); formDoldur(); pozBilgi(); panelCizgileri(); panelCanli();
+};
+
+// ---- Formasyonlar (6. sekme)
+function formasyonCiz() {
+  if (!V || !V.formasyon) return;
+  const F = V.formasyon;
+  $("frm-rast").textContent = F.rastgele.isabet2.toFixed(0);
+  $("frm-mal").textContent = F.maliyet;
+  const iyi = v => v === null || v === undefined ? "" : v > F.rastgele.isabet2 + 1 ? "up" : v < F.rastgele.isabet2 - 1 ? "down" : "dim";
+  tablo("frm-tablo", ["Saat", "Formasyon", "Ne dedi", "Fiyat", "1 saat sonra fiyat", "Sonuç", "Ölçülmüş isabet"],
+    F.sinyaller.slice().reverse().slice(0, 25).map(x => `<tr>
+      <td>${x.saat}</td><td>${x.ad}</td>
+      <td class="${x.yon > 0 ? "up" : "down"}">${x.yon > 0 ? "yukarı" : "aşağı"}</td>
+      <td>${f(x.fiyat)}</td>
+      <td class="${x.sonra === null ? "dim" : x.sonra > 0 ? "up" : "down"}">${x.sonra === null ? "–" : (x.sonra > 0 ? "+" : "") + x.sonra + "%"}</td>
+      <td>${x.sonra === null ? '<span class="durum bos">1 saat dolmadı</span>'
+        : (x.sonra > 0) === (x.yon > 0) ? '<span class="durum iyi">✓ tuttu</span>' : '<span class="durum kotu">✗ tutmadı</span>'}</td>
+      <td class="${iyi(x.isabet)}">${x.isabet === null ? "–" : "%" + x.isabet}</td></tr>`));
+  if (!F.sinyaller.length) $("frm-tablo").innerHTML += '<tr><td colspan="7" class="dim">Görünen aralıkta formasyon yok.</td></tr>';
+  const dolan = F.sinyaller.filter(x => x.sonra !== null);
+  const tutan = dolan.filter(x => (x.sonra > 0) === (x.yon > 0));
+  $("frm-not").innerHTML = dolan.length
+    ? `Görünen aralıkta 1 saati dolmuş ${dolan.length} sinyalin <b>${tutan.length}</b> tanesinde yön tuttu (%${(100 * tutan.length / dolan.length).toFixed(0)}).
+       "1 saat sonra fiyat" sütunu <b>gerçek fiyat değişimidir</b>: yukarı diyen bir sinyalde artı, aşağı diyen bir sinyalde eksi olması tuttuğu anlamına gelir.`
+    : "";
+  tablo("frm-olcum", ["Yöntem", "Sinyal sayısı", "İsabet 1. yarı", "İsabet 2. yarı", "Ortalama hareket", "Komisyon sonrası net"],
+    F.olcum.map(o => {
+      const net1 = o.ort1 === null ? null : o.ort1 - F.maliyet, net2 = o.ort2 === null ? null : o.ort2 - F.maliyet;
+      return `<tr><td>${o.ad}</td><td>${o.n}</td>
+        <td class="${iyi(o.isabet1)}">${o.isabet1 === null ? "–" : "%" + o.isabet1}</td>
+        <td class="${iyi(o.isabet2)}">${o.isabet2 === null ? "–" : "%" + o.isabet2}</td>
+        <td class="dim">${o.ort1 === null ? "–" : (o.ort1 > 0 ? "+" : "") + o.ort1.toFixed(3) + "% / " + (o.ort2 > 0 ? "+" : "") + o.ort2.toFixed(3) + "%"}</td>
+        <td class="down">${net1 === null ? "–" : net1.toFixed(3) + "% / " + net2.toFixed(3) + "%"}</td></tr>`;
+    }));
+}
+
+// ---- Tarayıcı (5. sekme): bütün coinler + o durumun geçmişteki sonucu
+let tarVeri = null, tarSira = "yukselen", tarZaman = 0;
+const TAR_SIRA = {
+  yukselen: (a, b) => b.degisim - a.degisim,
+  dusen: (a, b) => a.degisim - b.degisim,
+  fon: (a, b) => Math.abs(b.fon) - Math.abs(a.fon),
+  hacim: (a, b) => b.hacim - a.hacim,
+};
+async function tarayiciCek(zorla) {
+  if (!zorla && Date.now() - tarZaman < 20000) return;
+  tarZaman = Date.now();
+  try {
+    tarVeri = await tarayiciVeri(KALDIRAC, TABAN);
+    tarCiz();
+  } catch (e) { $("tar-tablo").innerHTML = '<tr><td class="warn">Tarayıcı verisi alınamadı</td></tr>'; }
+}
+function tarCiz() {
+  if (!tarVeri) return;
+  $("tar-taban").textContent = `${tarVeri.taban_coin} coin, ${tarVeri.taban_gun} gün`;
+  $("tar-lev").textContent = tarVeri.lev;
+  $("tar-saat").textContent = "güncelleme " + tarVeri.guncelleme;
+  document.querySelectorAll("button[data-tar]").forEach(b => b.classList.toggle("aktif", b.dataset.tar === tarSira));
+  const L = tarVeri.lev;
+  const satir = c => {
+    const t4 = c.t4 || {}, t24 = c.t24 || {};
+    const lq4 = t4[`liq${L}_long`], lq24 = t24[`liq${L}_long`];
+    const renk = v => v === undefined ? "" : v >= 60 ? "down" : v >= 30 ? "warn" : "";
+    const yk = t4.yukari;
+    return `<tr data-coin="${c.symbol}" style="cursor:pointer">
+      <td><b>${c.symbol.replace(/USDT$/, "")}</b></td>
+      <td>${c.fiyat < 1 ? c.fiyat.toFixed(5) : c.fiyat.toFixed(3)}</td>
+      <td class="${c.degisim >= 0 ? "up" : "down"}">${c.degisim >= 0 ? "+" : ""}${c.degisim.toFixed(1)}%</td>
+      <td>${(c.hacim / 1e6).toFixed(0)}M$</td>
+      <td class="${Math.abs(c.fon) > 0.05 ? "warn" : "dim"}">${c.fon >= 0 ? "+" : ""}${c.fon.toFixed(3)}%</td>
+      <td class="dim">${c.tepeye.toFixed(1)}% / +${Math.abs(c.dibe).toFixed(1)}%</td>
+      <td class="dim">${c.durum || "–"}</td>
+      <td class="${yk === undefined ? "" : Math.abs(yk - 50) < 3 ? "dim" : ""}">${yk === undefined ? "–" : "%" + yk.toFixed(0)}</td>
+      <td class="${renk(lq4)}">${lq4 === undefined ? "–" : "%" + lq4.toFixed(0)}</td>
+      <td class="${renk(lq24)}">${lq24 === undefined ? "–" : "%" + lq24.toFixed(0)}</td></tr>`;
+  };
+  tablo("tar-tablo", ["Coin", "Fiyat", "24 saat", "Hacim", "Fonlama", "24s tepe / dip uzaklığı", "Durum",
+                      "Geçmişte 4s yukarı", `${L}x likidasyon 4s`, `${L}x likidasyon 24s`],
+    tarVeri.coinler.slice().sort(TAR_SIRA[tarSira]).slice(0, 40).map(satir));
+  document.querySelectorAll("#tar-tablo tr[data-coin]").forEach(tr => tr.onclick = () => sembolDegistir(tr.dataset.coin));
+}
+document.querySelectorAll("button[data-tar]").forEach(b => b.onclick = () => { tarSira = b.dataset.tar; tarCiz(); });
+setInterval(() => { if (sekme === "tarayici") tarayiciCek(false); }, 20000);
+
+// her sekmenin kendi varsayılan zaman aralığı: Tahmin son 3 saat + tahmin ufku, ICT son 14 saat (killzone'lar saatlerce arayla)
+function gorunumAyarla() {
+  if (!V || !sonBar) return;
+  if (sekme === "ict") {
+    chart.timeScale().setVisibleRange({ from: Math.max(V.mumlar[0].time, sonBar.time - 14 * 3600), to: sonBar.time + 1200 });
+  } else if (sekme === "panel") {
+    const E = V.video ? V.video.echo : [];
+    chart.timeScale().setVisibleRange({ from: sonBar.time - 3 * 3600, to: (E.length ? E[E.length - 1].time : sonBar.time) + 300 });
+  } else if (sekme === "video") {
+    const E = V.video ? V.video.echo : [];
+    chart.timeScale().setVisibleRange({ from: sonBar.time - 8 * 3600, to: (E.length ? E[E.length - 1].time : sonBar.time) + 600 });
+  } else {
+    const son = V.koni.p50.length ? V.koni.p50[V.koni.p50.length - 1].time : sonBar.time;
+    chart.timeScale().setVisibleRange({ from: sonBar.time - Math.max(3 * 3600, V.ufuk_dk * 180), to: son + 300 });
+  }
+}
+
+function sekmeUygula() {
+  const ict = sekme === "ict", video = sekme === "video", panel = sekme === "panel", tarayici = sekme === "tarayici";
+  const formasyon = sekme === "formasyon";
+  const tahmin = !ict && !video && !panel && !tarayici && !formasyon;
+  document.querySelectorAll("button[data-sekme]").forEach(b => b.classList.toggle("aktif", b.dataset.sekme === sekme));
+  document.querySelectorAll(".kart-ict").forEach(e => e.classList.toggle("gizli", !ict));
+  document.querySelectorAll(".kart-video").forEach(e => e.classList.toggle("gizli", !video));
+  document.querySelectorAll(".kart-panel").forEach(e => e.classList.toggle("gizli", !panel));
+  document.querySelectorAll(".kart-tarayici").forEach(e => e.classList.toggle("gizli", !tarayici));
+  document.querySelectorAll(".kart-formasyon").forEach(e => e.classList.toggle("gizli", !formasyon));
+  if (formasyon) formasyonCiz();
+  $("alan").classList.toggle("gizli", tarayici || formasyon);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
+  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon);
+  if (tarayici) tarayiciCek(true);
+  $("poz-bilgi").classList.toggle("gizli", panel);
+  mum.applyOptions({ visible: !panel && !(tahmin && mumModu) });
+  if (tahmin) mumSeri.applyOptions({ visible: mumModu });
+  document.querySelectorAll(".kart-tahmin").forEach(e => e.classList.toggle("gizli", !tahmin));
+  $("tahmin-kontrol").classList.toggle("gizli", !tahmin);
+  Object.values(koni).forEach(x => x.applyOptions({ visible: tahmin }));
+  Object.values(gecmis).forEach(x => x.applyOptions({ visible: tahmin }));
+  zincirSeri.forEach(x => x.applyOptions({ visible: tahmin }));
+  hayaletSeri.forEach(x => x.applyOptions({ visible: tahmin }));
+  if (tahmin) aralikUygula();
+  if (!V) return;
+  ictCiz();
+  videoCiz();
+  srCiz();
+  fiyatCiz();
+  if (panel) panelFormDoldur();
+  panelCiz();
+  if (ict) mum.setMarkers(ictIsaretleri());
+  else if (video) mum.setMarkers(videoIsaretleri());
+  else if (panel) mum.setMarkers([]);
+  else { zincirCiz(); gecmisCiz(); }
+}
+document.querySelectorAll("button[data-sekme]").forEach(b => b.onclick = () => {
+  sekme = b.dataset.sekme;
+  try { localStorage.setItem("sekme", sekme); } catch (e) {}
+  sekmeUygula();
+  gorunumAyarla();
+  setTimeout(gorunumAyarla, 120);     // panel açılıp grafik daralınca aralık soldan kırpılmasın
+});
+
+function tablo(id, bas, satirlar) {
+  $(id).innerHTML = "<tr>" + bas.map(h => `<th>${h}</th>`).join("") + "</tr>" + satirlar.join("");
+}
+
+// destek/direnç çizgileri sadece Tahmin sekmesinde; ICT sekmesinde EQH/EQL ile aynı seviyeleri tekrar ederdi
+function srCiz() {
+  cizgiler.forEach(x => x.s.removePriceLine(x.l));
+  cizgiler = [];
+  if (sekme !== "tahmin" || !V) return;
+  const S = anaSeri(), ekle = (fiyat, renk, baslik) => ({ s: S, l: S.createPriceLine({ price: fiyat, color: renk,
+    lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: baslik }) });
+  cizgiler = V.direncler.map(x => ekle(x.fiyat, "#ffb74d", `R ${x.test}x`))
+    .concat(V.destekler.map(x => ekle(x.fiyat, "#4fc3f7", `S ${x.test}x`)));
+}
+
+function ciz() {
+  ufukDugmeleri();
+  if (ilk) {
+    const h = V.price < 1 ? 5 : V.price < 100 ? 4 : 2;
+    const pf = { priceFormat: { type: "price", precision: h, minMove: Math.pow(10, -h) } };
+    mum.applyOptions(pf);
+    Object.values(koni).concat(Object.values(gecmis), zincirSeri, hayaletSeri, [videoBaz, videoEcho, videoEchoIz, mumSeri, trendCizgi, panelEcho]).forEach(s => s.applyOptions(pf));
+    $("sembol").textContent = V.symbol;
+  }
+  fiyatCiz();
+  mumSeri.setData(V.mumlar);
+  sonBar = V.mumlar[V.mumlar.length - 1];
+  if (sekme === "tahmin") { zincirCiz(); gecmisCiz(); }
+  ictCiz();
+  videoCiz();
+  if (sekme === "ict") mum.setMarkers(ictIsaretleri());
+  if (sekme === "video") mum.setMarkers(videoIsaretleri());
+  panelCiz();
+  if (sekme === "formasyon") formasyonCiz();
+  srCiz();
+  if (ilk) {
+    poz = pozYukle(V.symbol) || V.pozisyon || null;
+    pozCizgileri();
+    formDoldur();
+  }
+  pozBilgi();
+
+  const B = V.benzer;
+  $("zaman").textContent = `${V.tarih} · veri ${V.guncelleme} · en yeni tahmin ${V.tahmin_saati} · ${aktifLev()}x`;
+  $("benzer").innerHTML = `Benzer an: ${B.n} (${B.gun} gün)` +
+    (B.n < V.min_benzer ? ' <span class="warn">⚠ tahmin için yetersiz, mor çizilmiyor</span>'
+      : B.gun < V.min_gun ? ` <span class="warn">⚠ benzer anlar sadece ${B.gun} günden: coin alışılmadık derecede oynak, tahmin son günleri kopyalar — mor çizilmiyor</span>`
+      : B.gun < 15 ? ' <span class="warn">⚠ az gün, güvenilirlik düşük</span>' : "");
+  if (!ws || ws.readyState !== 1) $("fiyat").textContent = f(V.price);
+
+  const kal = (v, i) => v === null || v === undefined ? "–" : (i === keskinMod ? `<b>%${v.toFixed(2)}</b>` : `%${v.toFixed(2)}`);
+  tablo("karne", ["Ufuk", "Değerlendirilen", "%80 bant içinde", "%50 bant içinde", "Yön isabeti",
+                  `Ort. hata: medyan / ${V.keskin_k[0]}k / ${V.keskin_k[1]}k / değişmez`],
+    Object.values(V.karne).map(k => `<tr data-ufuk="${k.dk / 5}"><td>${k.dk} dk</td><td>${k.top}</td>
+      <td>${yuzde(k.ic80)}</td><td>${yuzde(k.ic50)}</td>
+      <td class="${k.yon >= 55 ? "up" : k.yon !== null && k.yon <= 45 ? "down" : ""}">${yuzde(k.yon)} <span class="dim">(${k.yon_n})</span></td>
+      <td>${kal(k.hata_model, 0)} / ${kal(k.hata_orta, 1)} / ${kal(k.hata_keskin, 2)} / <span class="dim">${k.hata_naif === null ? "–" : "%" + k.hata_naif.toFixed(2)}</span></td></tr>`));
+  gecmisCiz();
+  const LO = levOran(), LEV = aktifLev(), LIQ_ROE = (1 / LEV - V.mmr) * 100 * LEV;
+  tablo("dilim", ["Saat", "Yukarıda", "Eğilim", "Orta", "%80 aralık", `ROI ${LEV}x`],
+    V.dilimler.map(d => `<tr><td>${d.aralik}</td><td class="${d.yuk >= 55 ? "up" : d.yuk <= 45 ? "down" : ""}">%${d.yuk.toFixed(0)}</td>
+      <td>${d.egilim}</td><td>${f(d.orta)}</td><td>${f(d.alt)} – ${f(d.ust)}</td><td>${sg(d.roe_alt * LO)} / ${sg(d.roe_ust * LO)}</td></tr>`));
+  tablo("sr", ["Seviye", "Tür", "Uzaklık", `ROI ${LEV}x`, "Test", `${V.ufuk_dk} dk değme`, "Son"],
+    [...V.direncler.slice().reverse(), ...V.destekler].map(s => `<tr><td class="${s.tur === "destek" ? "sup" : "res"}">${f(s.fiyat)}</td>
+      <td>${s.tur}</td><td>${s.uzaklik >= 0 ? "+" : "−"}%${Math.abs(s.uzaklik).toFixed(2)}</td><td>${sg(s.roe * LO)}</td><td>${s.test} (${s.kaynak})</td>
+      <td>%${s.degme.toFixed(0)}</td><td class="dim">${s.son}</td></tr>`));
+  tablo("sen", ["", "Giriş", "Stop", "Hedef", "ROI stop / hedef", "Önce hedef", "Beklenti ROI"],
+    V.senaryolar.map(s => `<tr><td class="${s.yon === "LONG" ? "up" : "down"}">${s.yon}</td><td>${f(s.giris)}</td>
+      <td>${f(s.stop)}</td><td>${f(s.hedef)}</td><td>${sg(-s.stop_roe * LO)} / ${sg(s.hedef_roe * LO)}${s.stop_roe * LO >= LIQ_ROE ? ' <span class="warn">⚠ likidasyon önce</span>' : ""}</td>
+      <td>%${s.p_hedef.toFixed(0)}</td><td class="${s.beklenti > 0 ? "up" : "down"}">${sg(s.beklenti * LO)}</td></tr>`));
+  $("sennot").textContent = V.senaryolar.length
+    ? `Stop en yakın seviyenin %0.3 ötesinde, hedef karşı seviyede. "Önce hedef" = benzer anlarda ${V.ufuk_dk} dk içinde fiyatın stoptan önce hedefe değme oranı. Beklenti ROI komisyon dahil ortalama sonuçtur; negatifse bu kurulum geçmişte ortalamada kaybettirmiş. ${LEV}x'te likidasyon ≈ ROI -${LIQ_ROE.toFixed(0)}.`
+    : "Senaryo hesaplanamadı (seviye ya da benzer an yetersiz).";
+
+  if (ilk) {
+    ilk = false;
+    sekmeUygula();
+    gorunumAyarla();
+    setTimeout(gorunumAyarla, 120);
+    canliBaglan();
+    isaretBaglan();
+  }
+}
+
+let TAH = null, mesgul = false;
+async function yukle() {
+  if (mesgul) return;
+  mesgul = true;
+  const ilerle = m => {
+    if (V) return;
+    $("zaman").innerHTML = `<span class="dim">${SEMBOL}: ${m}</span>`;
+    const ac = document.getElementById("acilis");
+    if (ac) ac.textContent = `${SEMBOL} — ${m}`;
+  };
+  try {
+    if (!TAH || TAH.symbol !== SEMBOL) TAH = new Tahminci(SEMBOL, UFUK);
+    V = await paketUret(TAH, SEMBOL, KALDIRAC, 0.0005, MMR, OLCUM, ilerle);
+    const ac = document.getElementById("acilis"); if (ac) ac.remove();
+    $("sembol-durum").textContent = "";
+    ciz();
+  } catch (e) {
+    $("zaman").innerHTML = `<span class="warn">Veri alınamadı: ${e.message}</span>`;
+    $("sembol-durum").textContent = "";
+  } finally { mesgul = false; }
+}
+
+// Binance futures piyasa akışı "/market/ws" altında; eski "/ws" yolu bağlanıp veri göndermeyebiliyor
+const WS_YOLLARI = ["market/ws", "ws"];
+let wsYol = 0, sonMesaj = 0, yedekte = false;
+function rozet(metin, canli) { $("canli").textContent = metin; $("canli").classList.toggle("canli", canli); }
+
+function mumGuncelle(bar) {
+  if (sonBar && bar.time < sonBar.time) return;
+  const r = sekme === "video" ? renk1m(bar.time) : null;
+  mum.update(r ? { time: bar.time, value: bar.close, color: r } : { time: bar.time, value: bar.close });
+  if (bar.open !== undefined) mumSeri.update({ time: bar.time, open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+  sonBar = bar;
+  if (sekme === "tahmin") zincirCiz();  // her fiyat güncellemesinde sapma ve kırmızı kısım ilerler
+  else if (sekme === "ict") { kutulariHesapla(); ictKarolar(); }  // süren killzone kutusu büyür, uzaklıklar canlı
+  else if (sekme === "video") videoSapma();
+  pozBilgi();
+  $("fiyat").textContent = f(bar.close);
+  document.title = `${f(bar.close)} ${V.symbol}`;
+}
+
+function canliBaglan() {
+  if (ws) { ws.onclose = null; ws.close(); }
+  ws = new WebSocket(`wss://fstream.binance.com/${WS_YOLLARI[wsYol]}/${V.symbol.toLowerCase()}@kline_1m`);
+  ws.onopen = () => rozet("bağlandı, veri bekleniyor", false);
+  ws.onclose = () => { rozet("bağlantı koptu, yeniden deneniyor", false); setTimeout(canliBaglan, 3000); };
+  ws.onmessage = ev => {
+    const k = JSON.parse(ev.data).k;
+    if (!k) return;
+    sonMesaj = Date.now();
+    yedekte = false;
+    rozet("● canlı", true);
+    mumGuncelle({ time: Math.floor(k.t / 1000) + V.tz, open: +k.o, high: +k.h, low: +k.l, close: +k.c });
+  };
+}
+
+async function yedekCek() {
+  try {
+    const d = await klines(V.symbol, "1m", 1);
+    const x = d[d.length - 1];
+    mumGuncelle({ time: Math.floor(x.t / 1000) + V.tz, open: x.o, high: x.h, low: x.l, close: x.c });
+    rozet("● yedek akış (5 sn)", true);
+  } catch (e) {}
+}
+
+setInterval(() => {
+  if (!V || Date.now() - sonMesaj < 15000) return;
+  if (!yedekte && ws && ws.readyState === 1) {       // bağlı ama sessiz: diğer yolu dene
+    wsYol = (wsYol + 1) % WS_YOLLARI.length;
+    ws.close();
+  }
+  yedekte = true;
+  yedekCek();
+}, 5000);
+
+TABAN = TABAN_GOMULU; OLCUM = OLCUM_GOMULU;
+(async () => {
+  await yukle();
+  setInterval(yukle, 30000);
+})();
+</script>
+</body></html>

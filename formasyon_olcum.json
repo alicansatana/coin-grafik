@@ -1,0 +1,107 @@
+{
+ "Yutan mum (engulfing)": {
+  "n": 128154,
+  "isabet1": 48.2,
+  "isabet2": 48.3,
+  "ort1": -0.0062,
+  "ort2": -0.0106
+ },
+ "Çekiç / ters çekiç": {
+  "n": 141540,
+  "isabet1": 48.1,
+  "isabet2": 49.1,
+  "ort1": -0.0142,
+  "ort2": 0.003
+ },
+ "Sabah/akşam yıldızı": {
+  "n": 36416,
+  "isabet1": 48.5,
+  "isabet2": 48.3,
+  "ort1": -0.0002,
+  "ort2": -0.0023
+ },
+ "3 asker / 3 karga": {
+  "n": 29636,
+  "isabet1": 45.6,
+  "isabet2": 45.5,
+  "ort1": -0.0359,
+  "ort2": -0.0288
+ },
+ "Harami": {
+  "n": 133359,
+  "isabet1": 49.6,
+  "isabet2": 50.0,
+  "ort1": 0.0024,
+  "ort2": -0.0003
+ },
+ "Delen mum (piercing/dark cloud)": {
+  "n": 22519,
+  "isabet1": 49.8,
+  "isabet2": 49.9,
+  "ort1": -0.0183,
+  "ort2": -0.0316
+ },
+ "Marubozu": {
+  "n": 78473,
+  "isabet1": 46.6,
+  "isabet2": 47.3,
+  "ort1": -0.0273,
+  "ort2": -0.0193
+ },
+ "İkili dip / ikili tepe": {
+  "n": 58196,
+  "isabet1": 47.5,
+  "isabet2": 47.9,
+  "ort1": 0.0031,
+  "ort2": 0.0168
+ },
+ "Omuz-baş-omuz": {
+  "n": 2984,
+  "isabet1": 49.0,
+  "isabet2": 48.8,
+  "ort1": -0.0768,
+  "ort2": -0.1327
+ },
+ "Sıkışma kırılımı": {
+  "n": 49045,
+  "isabet1": 44.7,
+  "isabet2": 43.6,
+  "ort1": -0.0188,
+  "ort2": -0.0487
+ },
+ "Bollinger sıkışması": {
+  "n": 60370,
+  "isabet1": 46.5,
+  "isabet2": 44.8,
+  "ort1": 0.0061,
+  "ort2": -0.0322
+ },
+ "RSI uyumsuzluğu": {
+  "n": 10328,
+  "isabet1": 48.9,
+  "isabet2": 49.8,
+  "ort1": -0.0013,
+  "ort2": 0.0156
+ },
+ "Altın/ölüm kesişimi": {
+  "n": 13172,
+  "isabet1": 45.5,
+  "isabet2": 46.2,
+  "ort1": -0.0113,
+  "ort2": -0.0139
+ },
+ "RSI 30/70 dönüşü": {
+  "n": 39316,
+  "isabet1": 50.7,
+  "isabet2": 52.7,
+  "ort1": -0.0241,
+  "ort2": 0.0127
+ },
+ "Ortalamaya dönüş (z=2)": {
+  "n": 71914,
+  "isabet1": 53.5,
+  "isabet2": 54.8,
+  "ort1": 0.0271,
+  "ort2": 0.0451
+ }
+}
