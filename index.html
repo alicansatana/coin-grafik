@@ -35,7 +35,21 @@ input,select{background:var(--panel);color:var(--text);border:1px solid var(--li
 .poz-etiket{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-right:6px}
 .poz-etiket.long{background:#173a33;color:#80cbc4}.poz-etiket.short{background:#3a2327;color:#ef9a9a}
 #alan{display:flex;gap:10px;margin:0 8px;align-items:stretch}
-#chart{height:540px;flex:1;min-width:0}
+#chart{height:540px;flex:1;min-width:0;position:relative}
+/* --- çizim katmanı --- */
+#ciz-kanvas{position:absolute;left:0;top:0;width:100%;height:100%;z-index:3;pointer-events:none}
+body.ciz-acik #ciz-kanvas{pointer-events:auto;touch-action:none;cursor:crosshair}
+#ciz-bar{position:absolute;left:8px;top:8px;z-index:4;display:flex;gap:4px;align-items:center;
+  background:rgba(18,20,26,.88);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
+#ciz-bar button{padding:4px 9px;font-size:13px;line-height:1.2;white-space:nowrap}
+#ciz-bar .renk{width:20px;height:20px;border-radius:50%;border:2px solid #4a4f5a;padding:0;cursor:pointer}
+#ciz-bar .renk.aktif{border-color:#fff}
+#ciz-bar .ayrac{width:1px;height:18px;background:var(--line);margin:0 2px}
+@media (max-width:760px){
+  #ciz-bar{left:6px;top:6px;padding:5px 7px;gap:6px}
+  #ciz-bar button{padding:7px 11px;font-size:14px}
+  #ciz-bar .renk{width:26px;height:26px}
+}
 .coin-sec{display:inline-flex;gap:6px;align-items:center}
 .coin-sec input{width:150px;text-transform:uppercase}
 /* Strateji paneli */
@@ -155,7 +169,17 @@ details.kavram p{margin:6px 0}
   <button id="ufuk-kaydet">Uygula</button>
 </div>
 <div class="poz-bilgi" id="poz-bilgi"></div>
-<div id="alan"><div id="chart"></div>
+<div id="alan"><div id="chart"><div id="ciz-bar" class="gizli">
+  <button id="ciz-ac" title="Grafiğe çizim yap">✏️</button>
+  <span id="ciz-araclar" style="display:none;gap:4px;align-items:center">
+    <span class="ayrac"></span>
+    <button id="ciz-tip" title="Serbest elle çiz / iki nokta arası düz çizgi">Serbest</button>
+    <span id="ciz-renkler" style="display:flex;gap:4px"></span>
+    <span class="ayrac"></span>
+    <button id="ciz-geri" title="Son çizimi geri al">↶</button>
+    <button id="ciz-temizle" title="Bu coindeki bütün çizimleri sil">🗑</button>
+  </span>
+</div></div>
 <aside id="panel" class="kart-panel gizli">
   <h2>Strateji paneli</h2>
   <div class="p-bas">Coin</div>
@@ -1305,6 +1329,9 @@ function sekmeUygula() {
   if (tahmin) mumSeri.applyOptions({ visible: mumModu });
   document.querySelectorAll(".kart-tahmin").forEach(e => e.classList.toggle("gizli", !tahmin));
   $("tahmin-kontrol").classList.toggle("gizli", !tahmin);
+  $("ciz-bar").classList.toggle("gizli", !tahmin);
+  if (!tahmin && cizModu) { cizModu = false; cizModuUygula(); }
+  cizAnahtarSon = "";
   Object.values(koni).forEach(x => x.applyOptions({ visible: tahmin }));
   Object.values(gecmis).forEach(x => x.applyOptions({ visible: tahmin }));
   zincirSeri.forEach(x => x.applyOptions({ visible: tahmin }));
@@ -1322,6 +1349,176 @@ function sekmeUygula() {
   else if (panel) mum.setMarkers([]);
   else { zincirCiz(); gecmisCiz(); }
 }
+// ================== ÇİZİM KATMANI (Tahmin sekmesi) ==================
+// Çizimler (zaman, fiyat) olarak saklanır; grafik kaydırılıp yakınlaştırıldığında
+// mumlarla birlikte hareket eder. Coin başına ayrı saklanır, sayfa yenilense de kalır.
+const CIZ_RENKLER = ["#ffd54f", "#4fc3f7", "#81c784", "#ff8a80", "#e6e8ec"];
+const cizKanvas = document.createElement("canvas");
+cizKanvas.id = "ciz-kanvas";
+$("chart").appendChild(cizKanvas);
+const cizCtx = cizKanvas.getContext("2d");
+let cizimler = [], cizModu = false, cizTipi = "serbest", cizRenk = CIZ_RENKLER[0];
+let cizAktif = null, cizZaman = [], cizAnahtarSon = "";
+
+const cizKey = () => "ciz_" + SEMBOL;
+function cizYukle() {
+  cizimler = [];
+  try { const d = JSON.parse(localStorage.getItem(cizKey()) || "[]"); if (Array.isArray(d)) cizimler = d; } catch (e) {}
+  cizAnahtarSon = "";
+}
+function cizSakla() { try { localStorage.setItem(cizKey(), JSON.stringify(cizimler)); } catch (e) {} }
+
+// grafiğin indeks sırasındaki zamanlar: geçmiş mumlar + ileri tahmin noktaları
+function cizIndeksKur() {
+  const M = V && V.mumlar;
+  if (!M || M.length < 2) { cizZaman = []; return; }
+  const z = M.map(x => x.time), son = z[z.length - 1];
+  const k = (V.koni && V.koni.p50) || [];
+  for (const q of k) if (q.time > son) z.push(q.time);
+  cizZaman = z;
+}
+
+// zaman -> piksel. Bilinen mum zamanları arasında doğrusal ara değer.
+function cizX(t) {
+  const Z = cizZaman; if (Z.length < 2) return null;
+  const ts = chart.timeScale(), n = Z.length;
+  if (t <= Z[0]) {
+    const a = ts.timeToCoordinate(Z[0]), b = ts.timeToCoordinate(Z[1]);
+    return (a == null || b == null) ? null : a + (t - Z[0]) * (b - a) / (Z[1] - Z[0]);
+  }
+  if (t >= Z[n - 1]) {
+    const a = ts.timeToCoordinate(Z[n - 2]), b = ts.timeToCoordinate(Z[n - 1]);
+    return (a == null || b == null) ? null : b + (t - Z[n - 1]) * (b - a) / (Z[n - 1] - Z[n - 2]);
+  }
+  let lo = 0, hi = n - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (Z[m] <= t) lo = m; else hi = m; }
+  const xa = ts.timeToCoordinate(Z[lo]), xb = ts.timeToCoordinate(Z[hi]);
+  return (xa == null || xb == null) ? null : xa + (t - Z[lo]) * (xb - xa) / (Z[hi] - Z[lo]);
+}
+// piksel -> zaman: cizX tek yönlü arttığı için ikili aramayla tersi alınır (ileri/geri tutarlı olsun)
+function cizT(x) {
+  const Z = cizZaman; if (Z.length < 2) return null;
+  let lo = Z[0] - 86400, hi = Z[Z.length - 1] + 86400;
+  if (cizX(lo) == null) return null;
+  for (let i = 0; i < 44; i++) {
+    const m = (lo + hi) / 2, xm = cizX(m);
+    if (xm == null) return null;
+    if (xm < x) lo = m; else hi = m;
+  }
+  return Math.round((lo + hi) / 2);
+}
+
+function cizKanvasBoyu() {
+  const o = $("chart"), r = window.devicePixelRatio || 1;
+  const w = Math.round(o.clientWidth * r), h = Math.round(o.clientHeight * r);
+  if (cizKanvas.width !== w || cizKanvas.height !== h) { cizKanvas.width = w; cizKanvas.height = h; return true; }
+  return false;
+}
+
+function cizimCiz() {
+  const r = window.devicePixelRatio || 1;
+  cizCtx.setTransform(r, 0, 0, r, 0, 0);
+  cizCtx.clearRect(0, 0, cizKanvas.width / r, cizKanvas.height / r);
+  if (sekme !== "tahmin" || !V) return;
+  const S = anaSeri();
+  const hepsi = cizAktif ? cizimler.concat([cizAktif]) : cizimler;
+  for (const c of hepsi) {
+    if (!c.n || c.n.length < 2) continue;
+    cizCtx.beginPath();
+    cizCtx.strokeStyle = c.renk; cizCtx.lineWidth = c.kalin || 2;
+    cizCtx.lineCap = "round"; cizCtx.lineJoin = "round";
+    let basladi = false;
+    for (const nk of c.n) {
+      const x = cizX(nk.t), y = S.priceToCoordinate(nk.p);
+      if (x == null || y == null) { basladi = false; continue; }
+      if (basladi) cizCtx.lineTo(x, y); else { cizCtx.moveTo(x, y); basladi = true; }
+    }
+    cizCtx.stroke();
+  }
+}
+
+// grafik kaydırılınca/ölçek değişince yeniden çiz (ucuz bir değişim anahtarıyla)
+function cizDongu() {
+  if (V && cizZaman.length > 1 && (cizimler.length || cizAktif)) {
+    const ts = chart.timeScale(), S = anaSeri();
+    const a = [ts.timeToCoordinate(cizZaman[0]), ts.timeToCoordinate(cizZaman[cizZaman.length - 1]),
+               S.priceToCoordinate(V.price), cizKanvas.width, cizKanvas.height, sekme].join(",");
+    if (cizKanvasBoyu() || a !== cizAnahtarSon) { cizAnahtarSon = a; cizimCiz(); }
+  }
+  requestAnimationFrame(cizDongu);
+}
+requestAnimationFrame(cizDongu);
+
+// ---- girdi (fare + dokunma tek yoldan: pointer olayları) ----
+function cizNokta(e) {
+  const r = cizKanvas.getBoundingClientRect();
+  const t = cizT(e.clientX - r.left), pz = anaSeri().coordinateToPrice(e.clientY - r.top);
+  return (t == null || pz == null) ? null : { t, p: pz };
+}
+cizKanvas.addEventListener("pointerdown", e => {
+  if (!cizModu) return;
+  const n = cizNokta(e); if (!n) return;
+  cizKanvas.setPointerCapture(e.pointerId);
+  cizAktif = { renk: cizRenk, kalin: 2, n: [n, n] };
+  e.preventDefault();
+});
+cizKanvas.addEventListener("pointermove", e => {
+  if (!cizModu || !cizAktif) return;
+  const n = cizNokta(e); if (!n) return;
+  if (cizTipi === "duz") cizAktif.n[1] = n;
+  else {
+    const son = cizAktif.n[cizAktif.n.length - 1];
+    const x1 = cizX(son.t), x2 = cizX(n.t), S = anaSeri();
+    const y1 = S.priceToCoordinate(son.p), y2 = S.priceToCoordinate(n.p);
+    if (x1 == null || x2 == null || y1 == null || y2 == null || Math.hypot(x2 - x1, y2 - y1) > 2) cizAktif.n.push(n);
+  }
+  cizAnahtarSon = ""; cizimCiz(); e.preventDefault();
+});
+function cizBitir(e) {
+  if (!cizAktif) return;
+  const S = anaSeri(), ilkN = cizAktif.n[0], sonN = cizAktif.n[cizAktif.n.length - 1];
+  const x1 = cizX(ilkN.t), x2 = cizX(sonN.t);
+  const y1 = S.priceToCoordinate(ilkN.p), y2 = S.priceToCoordinate(sonN.p);
+  const uzun = x1 != null && x2 != null && y1 != null && y2 != null && Math.hypot(x2 - x1, y2 - y1) > 4;
+  if (uzun || cizAktif.n.length > 3) { cizimler.push(cizAktif); cizSakla(); }
+  cizAktif = null; cizAnahtarSon = ""; cizimCiz();
+  if (e) e.preventDefault();
+}
+cizKanvas.addEventListener("pointerup", cizBitir);
+cizKanvas.addEventListener("pointercancel", cizBitir);
+
+// ---- araç çubuğu ----
+$("ciz-renkler").innerHTML = CIZ_RENKLER
+  .map(c => `<button class="renk" data-renk="${c}" style="background:${c}"></button>`).join("");
+function cizRenkTazele() {
+  document.querySelectorAll("#ciz-renkler .renk").forEach(b => b.classList.toggle("aktif", b.dataset.renk === cizRenk));
+}
+document.querySelectorAll("#ciz-renkler .renk").forEach(b => b.onclick = () => {
+  cizRenk = b.dataset.renk; try { localStorage.setItem("cizRenk", cizRenk); } catch (e) {} cizRenkTazele();
+});
+try { const r = localStorage.getItem("cizRenk"); if (CIZ_RENKLER.includes(r)) cizRenk = r; } catch (e) {}
+cizRenkTazele();
+
+function cizModuUygula() {
+  document.body.classList.toggle("ciz-acik", cizModu);
+  $("ciz-ac").classList.toggle("aktif", cizModu);
+  $("ciz-araclar").style.display = cizModu ? "flex" : "none";
+  $("ciz-ac").title = cizModu ? "Çizimi kapat (grafik yeniden kaydırılabilir)" : "Grafiğe çizim yap";
+  chart.applyOptions({ handleScroll: !cizModu, handleScale: !cizModu });
+}
+$("ciz-ac").onclick = () => { cizModu = !cizModu; cizModuUygula(); };
+$("ciz-tip").onclick = () => {
+  cizTipi = cizTipi === "serbest" ? "duz" : "serbest";
+  $("ciz-tip").textContent = cizTipi === "serbest" ? "Serbest" : "Düz";
+};
+$("ciz-geri").onclick = () => { cizimler.pop(); cizSakla(); cizAnahtarSon = ""; cizimCiz(); };
+$("ciz-temizle").onclick = () => {
+  if (!cizimler.length) return;
+  if (!confirm(`${SEMBOL} üzerindeki ${cizimler.length} çizim silinsin mi?`)) return;
+  cizimler = []; cizSakla(); cizAnahtarSon = ""; cizimCiz();
+};
+cizModuUygula();
+
 // dar ekranda grafik, kalan dikey bosluga tam otursun (iOS'ta vh adres cubuguyla kaydigi icin JS ile)
 function grafikBoyuAyarla() {
   const ch = $("chart");
@@ -1330,6 +1527,10 @@ function grafikBoyuAyarla() {
   ch.style.height = Math.max(300, Math.round(innerHeight - ust - 10)) + "px";
 }
 addEventListener("resize", grafikBoyuAyarla);
+if (window.ResizeObserver) {            // başlıktaki rozet/sapma yazısı satır kaydırınca grafik boyu bozulmasın
+  const go = new ResizeObserver(() => grafikBoyuAyarla());
+  document.querySelectorAll("header, #sekmeler").forEach(e => go.observe(e));
+}
 addEventListener("orientationchange", () => setTimeout(grafikBoyuAyarla, 250));
 
 try { if (localStorage.getItem("ayarAcik") === "1") document.body.classList.remove("ayar-kapali"); } catch (e) {}
@@ -1371,10 +1572,12 @@ function ciz() {
     mum.applyOptions(pf);
     Object.values(koni).concat(Object.values(gecmis), zincirSeri, hayaletSeri, [videoBaz, videoEcho, videoEchoIz, mumSeri, trendCizgi, panelEcho]).forEach(s => s.applyOptions(pf));
     $("sembol").textContent = V.symbol;
+    cizYukle();
   }
   fiyatCiz();
   mumSeri.setData(V.mumlar);
   sonBar = V.mumlar[V.mumlar.length - 1];
+  cizIndeksKur();
   if (sekme === "tahmin") { zincirCiz(); gecmisCiz(); }
   ictCiz();
   videoCiz();
