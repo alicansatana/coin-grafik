@@ -708,5 +708,80 @@ async function paketUret(tah, symbol, lev, fee, mmr, olcum, ilerle) {
 }
 
 // ---------- ölçüm tabloları (dosyadan okumak yerine gömülü: dosyaya çift tıklayınca da çalışsın) ----------
+// ---------- Hedef / Risk: hedefe mi stopa mı önce değer? ----------
+// Bu coinin son 60 günündeki her 5 dk anından başlayan GERÇEK fiyat yolları (mumların en yüksek / en düşük değerleri),
+// bugünkü oynaklığa ölçeklenir (sigma_şimdi / sigma_o an). Ayna görüntüleriyle birlikte kullanılır: yukarı ve aşağı
+// eşit kabul edilir, çünkü 1 yıllık ölçümlerde yönü maliyeti aşacak kadar tahmin eden bir yöntem bulunamadı.
+// Aynı 5 dk mumunda hem hedefe hem stopa değildiyse STOP sayılır (temkinli).
+// Doğrulama (40 coin x 1 yıl, her an sadece geçmiş 60 günle): 4 saatte tahmin ile gerçekleşen arası ~1 puan.
+const RISK_KAT = { 12: 0.90, 48: 1.0, 288: 1.0 };     // ufka göre oynaklık ölçek düzeltmesi: ilk 6 ayda seçildi, son 6 ayda kontrol edildi
+
+function riskSigma(c) {
+  const n = c.length, cs = new Float64Array(n + 1), sg = new Float64Array(n).fill(NaN);
+  for (let i = 1; i < n; i++) { const r = Math.log(c[i] / c[i - 1]); cs[i + 1] = cs[i] + r * r; }
+  for (let i = 287; i < n; i++) sg[i] = Math.sqrt(0.5 * (cs[i + 1] - cs[i - 11]) / 12 + 0.5 * (cs[i + 1] - cs[i - 287]) / 288);
+  return sg;
+}
+
+// her geçmiş andan başlayan H mumluk yol: u = o ana kadarki en yüksek, d = en düşük (kesir, ölçeklenmiş), f = son kapanış
+function riskKutuphane(k, H) {
+  const c = k.map(x => x.c), n = c.length, sg = riskSigma(c), sNow = sg[n - 1] * (RISK_KAT[H] || 1);
+  const adim = H >= 288 ? 3 : 1, yol = [];
+  for (let i = 300; i + H < n; i += adim) {
+    const s = sNow / sg[i];
+    if (!(s > 0) || !isFinite(s)) continue;
+    const u = new Float32Array(H), d = new Float32Array(H);
+    let mx = -Infinity, mn = Infinity;
+    for (let q = 1; q <= H; q++) {
+      const hq = k[i + q].h / c[i] - 1, lq = k[i + q].l / c[i] - 1;
+      if (hq > mx) mx = hq;
+      if (lq < mn) mn = lq;
+      u[q - 1] = mx * s; d[q - 1] = mn * s;
+    }
+    yol.push({ u, d, f: (c[i + H] / c[i] - 1) * s });
+  }
+  return { yol, H, sigma: sg[n - 1] };
+}
+
+// a: hedefe uzaklık, b: stopa uzaklık, liq: likidasyona uzaklık (hepsi şimdiki fiyata göre kesir, işlem yönünde)
+function riskOlasilik(lib, a, b, liq) {
+  const H = lib.H, bb = Math.min(b, liq), liqOnce = liq <= b;
+  let nT = 0, nS = 0, nL = 0, nN = 0, topN = 0;
+  const tek = (U, Dn, ayna, f) => {
+    for (let q = 0; q < H; q++) {
+      const yuk = ayna ? -Dn[q] : U[q], asg = ayna ? -U[q] : Dn[q];
+      if (asg <= -bb) { if (liqOnce) nL++; else nS++; return; }
+      if (yuk >= a) { nT++; return; }
+    }
+    nN++; topN += ayna ? -f : f;
+  };
+  for (const y of lib.yol) { tek(y.u, y.d, false, y.f); tek(y.u, y.d, true, y.f); }
+  const N = 2 * lib.yol.length || 1;
+  return { hedef: nT / N, stop: nS / N, likid: nL / N, hic: nN / N, hicOrt: nN ? topN / nN : 0 };
+}
+
+// grafikteki olasılık çizgileri: fiyatın h. mumun sonuna kadar bu uzaklığa DEĞME ihtimali p
+function riskEgriler(lib, oranlar) {
+  const H = lib.H, adim = H >= 288 ? 12 : H >= 48 ? 3 : 1, out = oranlar.map(() => []);
+  const v = new Float32Array(2 * lib.yol.length);
+  for (let q = adim - 1; q < H; q += adim) {
+    let j = 0;
+    for (const y of lib.yol) { v[j++] = y.u[q]; v[j++] = -y.d[q]; }
+    const s = v.slice(0, j).sort();
+    oranlar.forEach((p, i) => out[i].push({ h: q + 1, x: s[Math.min(j - 1, Math.floor((1 - p) * (j - 1)))] }));
+  }
+  return out;
+}
+
+// şu anki durum: son 1 saat hareketi, oynaklığa göre büyüklüğü, hacim oranı
+function riskDurum(k, sigma5) {
+  const n = k.length, c = k.map(x => x.c);
+  let v1 = 0, v24 = 0;
+  for (let i = n - 12; i < n; i++) v1 += k[i].v;
+  for (let i = n - 288; i < n; i++) v24 += k[i].v;
+  const r1 = (c[n - 1] / c[n - 13] - 1) * 100;
+  return { r1, z: r1 / (sigma5 * Math.sqrt(12) * 100), hk: (v1 / 12) / (v24 / 288), r4: (c[n - 1] / c[n - 49] - 1) * 100 };
+}
+
 const TABAN_GOMULU = {"kovalar": {"-100|-20": {"ad": "−%20'den fazla düştü", "alt": -100.0, "ust": -20.0, "4s": {"n": 13182, "yukari": 45.3, "ort": -0.12, "oynaklik": 6.33, "liq5_long": 5.7, "liq20_long": 58.9, "liq5_short": 8.3, "liq20_short": 56.8}, "24s": {"n": 13182, "yukari": 40.7, "ort": -0.69, "oynaklik": 15.34, "liq5_long": 27.1, "liq20_long": 84.1, "liq5_short": 28.6, "liq20_short": 79.7}}, "-20|-10": {"ad": "−%20 ile −%10", "alt": -20.0, "ust": -10.0, "4s": {"n": 57297, "yukari": 49.0, "ort": 0.08, "oynaklik": 2.92, "liq5_long": 0.7, "liq20_long": 30.8, "liq5_short": 1.2, "liq20_short": 31.6}, "24s": {"n": 57297, "yukari": 44.8, "ort": -0.15, "oynaklik": 7.13, "liq5_long": 6.0, "liq20_long": 67.4, "liq5_short": 10.1, "liq20_short": 64.1}}, "-10|-5": {"ad": "−%10 ile −%5", "alt": -10.0, "ust": -5.0, "4s": {"n": 205287, "yukari": 50.0, "ort": 0.07, "oynaklik": 1.77, "liq5_long": 0.2, "liq20_long": 14.4, "liq5_short": 0.3, "liq20_short": 14.3}, "24s": {"n": 205287, "yukari": 48.1, "ort": 0.11, "oynaklik": 4.44, "liq5_long": 1.6, "liq20_long": 49.6, "liq5_short": 3.9, "liq20_short": 49.2}}, "-5|5": {"ad": "−%5 ile +%5 (sakin)", "alt": -5.0, "ust": 5.0, "4s": {"n": 1885448, "yukari": 47.8, "ort": 0.04, "oynaklik": 1.25, "liq5_long": 0.1, "liq20_long": 6.2, "liq5_short": 0.2, "liq20_short": 8.1}, "24s": {"n": 1885448, "yukari": 49.0, "ort": 0.27, "oynaklik": 3.25, "liq5_long": 0.6, "liq20_long": 33.9, "liq5_short": 2.2, "liq20_short": 37.3}}, "5|10": {"ad": "+%5 ile +%10", "alt": 5.0, "ust": 10.0, "4s": {"n": 184371, "yukari": 45.6, "ort": 0.07, "oynaklik": 2.1, "liq5_long": 0.3, "liq20_long": 16.4, "liq5_short": 0.7, "liq20_short": 21.5}, "24s": {"n": 184371, "yukari": 45.2, "ort": 0.56, "oynaklik": 5.12, "liq5_long": 2.0, "liq20_long": 52.8, "liq5_short": 6.7, "liq20_short": 54.7}}, "10|25": {"ad": "+%10 ile +%25", "alt": 10.0, "ust": 25.0, "4s": {"n": 80479, "yukari": 45.8, "ort": 0.07, "oynaklik": 3.83, "liq5_long": 1.3, "liq20_long": 41.3, "liq5_short": 2.8, "liq20_short": 41.7}, "24s": {"n": 80479, "yukari": 41.3, "ort": 0.33, "oynaklik": 8.92, "liq5_long": 7.4, "liq20_long": 74.5, "liq5_short": 16.9, "liq20_short": 68.8}}, "25|40": {"ad": "+%25 ile +%40", "alt": 25.0, "ust": 40.0, "4s": {"n": 13085, "yukari": 46.4, "ort": -0.08, "oynaklik": 6.59, "liq5_long": 4.6, "liq20_long": 66.7, "liq5_short": 8.3, "liq20_short": 64.2}, "24s": {"n": 13085, "yukari": 39.2, "ort": 0.21, "oynaklik": 15.39, "liq5_long": 24.8, "liq20_long": 88.7, "liq5_short": 33.5, "liq20_short": 81.3}}, "40|1000000000.0": {"ad": "+%40'tan fazla yükseldi", "alt": 40.0, "ust": 1000000000.0, "4s": {"n": 8505, "yukari": 46.1, "ort": 0.07, "oynaklik": 10.45, "liq5_long": 14.4, "liq20_long": 79.2, "liq5_short": 20.0, "liq20_short": 75.6}, "24s": {"n": 8505, "yukari": 40.1, "ort": 0.62, "oynaklik": 24.08, "liq5_long": 46.8, "liq20_long": 92.9, "liq5_short": 49.1, "liq20_short": 87.5}}}, "coin": 528, "gun": 200};
 const OLCUM_GOMULU = {"Yutan mum (engulfing)": {"n": 128154, "isabet1": 48.2, "isabet2": 48.3, "ort1": -0.0062, "ort2": -0.0106}, "Çekiç / ters çekiç": {"n": 141540, "isabet1": 48.1, "isabet2": 49.1, "ort1": -0.0142, "ort2": 0.003}, "Sabah/akşam yıldızı": {"n": 36416, "isabet1": 48.5, "isabet2": 48.3, "ort1": -0.0002, "ort2": -0.0023}, "3 asker / 3 karga": {"n": 29636, "isabet1": 45.6, "isabet2": 45.5, "ort1": -0.0359, "ort2": -0.0288}, "Harami": {"n": 133359, "isabet1": 49.6, "isabet2": 50.0, "ort1": 0.0024, "ort2": -0.0003}, "Delen mum (piercing/dark cloud)": {"n": 22519, "isabet1": 49.8, "isabet2": 49.9, "ort1": -0.0183, "ort2": -0.0316}, "Marubozu": {"n": 78473, "isabet1": 46.6, "isabet2": 47.3, "ort1": -0.0273, "ort2": -0.0193}, "İkili dip / ikili tepe": {"n": 58196, "isabet1": 47.5, "isabet2": 47.9, "ort1": 0.0031, "ort2": 0.0168}, "Omuz-baş-omuz": {"n": 2984, "isabet1": 49.0, "isabet2": 48.8, "ort1": -0.0768, "ort2": -0.1327}, "Sıkışma kırılımı": {"n": 49045, "isabet1": 44.7, "isabet2": 43.6, "ort1": -0.0188, "ort2": -0.0487}, "Bollinger sıkışması": {"n": 60370, "isabet1": 46.5, "isabet2": 44.8, "ort1": 0.0061, "ort2": -0.0322}, "RSI uyumsuzluğu": {"n": 10328, "isabet1": 48.9, "isabet2": 49.8, "ort1": -0.0013, "ort2": 0.0156}, "Altın/ölüm kesişimi": {"n": 13172, "isabet1": 45.5, "isabet2": 46.2, "ort1": -0.0113, "ort2": -0.0139}, "RSI 30/70 dönüşü": {"n": 39316, "isabet1": 50.7, "isabet2": 52.7, "ort1": -0.0241, "ort2": 0.0127}, "Ortalamaya dönüş (z=2)": {"n": 71914, "isabet1": 53.5, "isabet2": 54.8, "ort1": 0.0271, "ort2": 0.0451}};
