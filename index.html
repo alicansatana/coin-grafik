@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=20260928b"></script>
+<script src="hesap.js?v=202609282056"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -251,6 +251,7 @@ details.kavram p{margin:6px 0}
   <button class="r-simdi" id="r-simdi">Şimdi al — giriş = anlık fiyat</button>
   <div class="p-bas">Süre</div>
   <div class="r-sec" id="r-sure"><button data-h="12">1 saat</button><button data-h="48" class="aktif">4 saat</button><button data-h="288">1 gün</button></div>
+  <div id="r-yorum"></div>
   <div id="r-sonuc"></div>
   <div class="p-bas" style="margin-top:10px">Aynı stopla farklı hedefler</div>
   <table id="r-tablo"></table>
@@ -1519,6 +1520,71 @@ function riskHesapla() {
     Doğrulama (40 coin, 1 yıl, her seferinde sadece geçmiş veriyle): model "%35" dediğinde gerçekleşen ~%35 — 4 saatte fark ~1 puan.`;
 }
 
+// ---------- Yorum: trader okuması (günlük trend + son 1 saat) ve bu okumanın ölçülmüş geçmişi ----------
+// Ölçüm: 40 coin x 1 yıl, saatte bir, 4 saat sonrası, %0.10 maliyet dahil (trader_mantik.py)
+let rGun = null, rGunCekiliyor = false;
+async function rGunlukCek() {
+  if (rGunCekiliyor || !V) return;
+  rGunCekiliyor = true;
+  try {
+    const r = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${V.symbol}&interval=1d&limit=120`);
+    const d = await r.json();
+    rGun = { s: V.symbol, z: Date.now(), c: d.slice(0, -1).map(x => +x[4]) };   // bugünkü bitmemiş gün hariç
+  } catch (e) {}
+  rGunCekiliyor = false;
+  riskHesapla();
+}
+function rTrend(c) {                              // 6 Donchian modeli: kaçı "yukarı trend" diyor (dünün kapanışına göre)
+  const B = [5, 10, 20, 30, 60, 90], n = c.length; let top = 0;
+  for (const N of B) {
+    let pos = 0, stop = NaN;
+    for (let t = N; t < n; t++) {
+      let onc = -Infinity, mx = -Infinity, mn = Infinity;
+      for (let j = t - N; j < t; j++) onc = Math.max(onc, c[j]);
+      for (let j = t - N + 1; j <= t; j++) { mx = Math.max(mx, c[j]); mn = Math.min(mn, c[j]); }
+      const orta = (mx + mn) / 2;
+      if (!pos) { if (c[t] > onc) { pos = 1; stop = orta; } }
+      else { stop = Math.max(stop, orta); if (c[t] < stop) pos = 0; }
+    }
+    top += pos;
+  }
+  return top;
+}
+function rYorumYaz() {
+  if (!TAH || !V) return;
+  if (!rGun || rGun.s !== V.symbol || Date.now() - rGun.z > 600000) { rGunlukCek(); if (!rGun || rGun.s !== V.symbol) { $("r-yorum").innerHTML = '<div class="dim">Yorum hazırlanıyor…</div>'; return; } }
+  const k = TAH.k, n = k.length, c = k.map(x => x.c);
+  let s2 = 0; for (let i = n - 288; i < n; i++) { const r = Math.log(c[i] / c[i - 1]); s2 += r * r; }
+  const z = Math.log(c[n - 1] / c[n - 13]) / (Math.sqrt(s2 / 288) * Math.sqrt(12));
+  const yeter = rGun.c.length >= 91, up = yeter ? rTrend(rGun.c) : null;
+  const trend = !yeter ? "yetersiz geçmiş" : up >= 5 ? `yukarı (${up}/6 model)` : up === 0 ? "aşağı (0/6 model)" : `kararsız (${up}/6 model)`;
+  let yon = null, baslik, neden, olcum, sinif;
+  if (z <= -2) {
+    yon = "long"; sinif = "up"; baslik = "LONG lehine — sert düşüş sonrası tepki";
+    neden = `Son 1 saatte normalin ${Math.abs(z).toFixed(1)} katı düştü. Sert düşüşten sonra kısa vadeli tepki, devam etmesinden biraz daha sık.`;
+    olcum = up === 0 ? "Bu durum (trend aşağı + sert düşüş → LONG): 4 saatte isabet %56.2, işlem başı net +%0.13, 10 ayın 6'sı kârlı."
+                     : "Sert düşüş sonrası LONG (genel): 4 saatte isabet ~%54-56. Bu anda SHORT açmak geçmişte %43 tuttu — kovalama.";
+  } else if (z >= 2) {
+    yon = null; sinif = "warn"; baslik = "BEKLE — yükselişi kovalama";
+    neden = `Son 1 saatte normalin ${z.toFixed(1)} katı yükseldi. Arkasından LONG'a atlamak geçmişte kaybettirdi; SHORT da güvenilir değil.`;
+    olcum = "Trend yukarı + sert yükseliş → LONG: isabet %46.1. Trend aşağı + sert yükseliş → SHORT: isabet %51, net −%0.20.";
+  } else if (up !== null && up >= 5 && z <= -1) {
+    yon = "long"; sinif = "up"; baslik = "LONG lehine (zayıf) — yukarı trendde geri çekilme";
+    neden = "Günlük trend yukarı, fiyat son 1 saatte geri çekildi: klasik 'trend yönünde, geri çekilmede al' okuması.";
+    olcum = "Bu durum: 4 saatte isabet %52.4, işlem başı net +%0.04, 10 ayın 5'i kârlı — kenar küçük.";
+  } else {
+    sinif = "dim"; baslik = "Net bir okuma yok — BEKLE";
+    neden = "Ne sert bir hareket ne de trend içinde geri çekilme var. Bu durumlarda yön yazı-turadan farksız ölçüldü.";
+    olcum = "Sadece günlük trende göre işlem: LONG %49.1, SHORT %51.0 isabet, ikisi de maliyet sonrası eksi.";
+  }
+  $("r-yorum").innerHTML = `<div class="r-kutu genis" style="margin-bottom:8px"><div class="p-bas">Yorum (trader okuması) · günlük trend: ${trend} · son 1 saat: ${z >= 0 ? "+" : ""}${z.toFixed(1)}σ</div>
+    <b class="${sinif}" style="font-size:16px">${baslik}</b><small style="font-size:12px;color:var(--text);margin-top:3px">${neden}</small>
+    <small style="margin-top:3px">Geçmiş ölçüm: ${olcum}</small>
+    ${yon && yon !== rYon ? `<button id="r-yorum-sec" style="margin-top:6px;width:100%">${yon.toUpperCase()} seç</button>` : ""}</div>`;
+  const b = $("r-yorum-sec"); if (b) b.onclick = () => { rYon = yon; rDugmeler(); rSakla(); riskHesapla(); };
+  $("r-ozet").innerHTML += `<br><span class="${sinif}">${baslik.split(" — ")[0]}</span>`;
+}
+
 function riskDurumYaz(lib) {
   const d = riskDurum(TAH.k, lib.sigma), satir = [];
   satir.push(`<div><b>${TAH.symbol}</b> son 1 saat: <span class="${d.r1 >= 0 ? "up" : "down"}">${d.r1 >= 0 ? "+" : ""}${d.r1.toFixed(2)}%</span>
@@ -1535,6 +1601,7 @@ function riskDurumYaz(lib) {
   }
   satir.push(`<div class="dim">BTC ile altcoinler aynı anda birlikte hareket eder; ama BTC'nin <i>geçmiş</i> hareketi altcoinin sonraki saatlerini tahmin etmiyor (1 yıl, 40 coin ölçümü).</div>`);
   $("r-durum").innerHTML = satir.join("");
+  rYorumYaz();
 }
 
 document.querySelectorAll("#risk [data-ryon]").forEach(b => b.onclick = () => { rYon = b.dataset.ryon; rDugmeler(); rSakla(); riskHesapla(); });
