@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202609291028"></script>
+<script src="hesap.js?v=202609291643"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -89,6 +89,11 @@ body.ciz-acik #ciz-kanvas{pointer-events:auto;touch-action:none;cursor:crosshair
 .dt-rozet.macd{background:#2a2f3a;color:#c9ced8}.dt-rozet.bolge{background:#2d2a1a;color:#ffd54f}
 .dt-rozet.yakin{background:transparent;color:var(--dim);border:1px solid var(--line)}.dt-rozet.kirik{background:#3a2327;color:#ffab91}
 @media (max-width:980px){.dt-iki{grid-template-columns:1fr}#dt-chart{height:320px}}
+/* Dip / Tepe 2 sekmesi */
+#dt2-chart{height:440px;margin-bottom:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.kart-diptepe2 .karo b{display:block;font-size:18px;margin:2px 0}
+.kart-diptepe2 .karo small{color:var(--dim);font-size:11px;display:block}
+@media (max-width:980px){#dt2-chart{height:320px}}
 /* Hedef / Risk sekmesi */
 #risk{width:360px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
   font-size:13px;align-self:flex-start}
@@ -187,7 +192,7 @@ details.kavram p{margin:6px 0}
   <span class="dim" id="zaman"></span><span class="dim" id="benzer"></span>
 </header>
 <div class="kontrol sekme" id="sekmeler">
-  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
+  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="diptepe2">Dip / Tepe 2</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
 </div>
 <div class="kontrol" id="tahmin-kontrol">
   <span class="dim">Geçmiş isabet çizgisi:</span>
@@ -347,6 +352,29 @@ details.kavram p{margin:6px 0}
       RSI uyumsuzluğu (divergence) ölçümde <i>zarar ettirdi</i>. 3+ kez test edilen bölge, 2 kez olandan biraz daha iyi.</div>
     <div class="note warn">Stopu bölgenin hemen altına (%1) koymak: %70 stop yiyor — fiyat desteği çoğu zaman önce iğneyle delip dönüyor. Stop geniş, kaldıraç düşük olmalı.
       "Alarm" sütunu: fiyat bölgeye girdiği an (destek üstü / direnç altı) — Binance'te o fiyata alarm kurabilirsin.</div>
+  </div>
+  <div class="card kart-diptepe2 gizli" style="grid-column:1/-1">
+    <h2>Dip / Tepe 2 — pompalanmış coin ana dirençte → SHORT</h2>
+    <div class="note" style="margin:0 0 10px"><b>Kural</b> (ilk yılda seçildi, ikinci yılda görmeden ölçüldü): fiyat <b>son 7 günün en düşüğünden en az %30 yukarıda</b> (pompa)
+      ve <b>ana dirence</b> değmiş — en az 4 dönüş noktası olan, en az 2 kez %15+ düşüş yaşatmış bölge. 4 saatlik mumlar, en likit <span id="dt2-sayi">100</span> coin.</div>
+    <div class="karolar" style="margin-bottom:10px">
+      <div class="karo"><div class="p-bas">7 gün sonra isabet</div><b class="up">%68.5 / %70.6</b><small>ilk yıl / test yılı · rastgele short %55–57</small></div>
+      <div class="karo"><div class="p-bas">7 gün medyan kazanç</div><b class="up">+%8.8 / +%6.6</b><small>günde tek işlem, en çok pompalanan coin</small></div>
+      <div class="karo"><div class="p-bas">%20 stoplu ortalama</div><b class="up">+%3.0 / +%1.6</b><small>stop yeme %27–32 · maliyet dahil</small></div>
+      <div class="karo"><div class="p-bas">Pozisyon içinde aleyhe</div><b class="down">medyan −%11</b><small>en kötü %10'da −%45…−%53 · <span style="color:#ffca28;font-weight:700">kaldıraç en fazla 2–3x</span></small></div>
+    </div>
+    <div class="note warn" style="margin:0 0 10px">Çeyrek çeyrek: 8 çeyreğin 7'sinde isabet %60+, ama <b>en son çeyrekte %46</b> — kural son haftalarda zayıfladı. 20x ile açılırsa işlemlerin ~%80'i önce likide olurdu:
+      pompalanan coin çoğu zaman önce biraz daha yükselip sonra düşüyor. Stop ~%20 yukarıda, pozisyon küçük.</div>
+    <div class="kontrol" style="padding:0 0 8px"><button id="dt2-tara">Yeniden tara</button><span class="dim" id="dt2-durum"></span></div>
+    <div id="dt2-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği, direnç bölgesi, 7 günlük dip ve stop seviyesi burada açılır.</div>
+    <div id="dt2-chart"></div>
+    <div class="dt-iki">
+      <div style="overflow-x:auto"><h2 class="down">SİNYAL — kuralı şu an sağlayan (SHORT)</h2><table id="dt2-sinyal"></table></div>
+      <div style="overflow-x:auto"><h2>İZLE — pompalanmış, ana dirence %10'dan yakın</h2><table id="dt2-izle"></table></div>
+    </div>
+    <div class="note"><b>Düşüşten sonra alım (LONG):</b> iki yılda da tutan kural <b>bulunamadı</b>. En iyi aday ("RSI dipte + MACD derin negatif + BTC 200 ortalamasının altında")
+      ilk yılda 3 günde %59 tuttu, test yılında %41'e düştü; aşırı satılmış coinler 7 gün içinde medyan −%10…−%15 daha düşüyor. Bu yüzden burada LONG listesi yok.
+      Kullanılan göstergeler: RSI(14/2), Stokastik, CCI, MFI, Bollinger %B, EMA uzaklığı, ADX, MACD, hacim, fitiller, ardışık mumlar, 7/30 günlük getiri, BTC trendi, ana destek/direnç.</div>
   </div>
   <div class="card kart-tarayici gizli" style="grid-column:1/-1">
     <h2>Tarayıcı — bütün coinlerin şu anki durumu</h2>
@@ -1403,8 +1431,8 @@ function gorunumAyarla() {
 
 function sekmeUygula() {
   const ict = sekme === "ict", video = sekme === "video", panel = sekme === "panel", tarayici = sekme === "tarayici";
-  const formasyon = sekme === "formasyon", risk = sekme === "risk", diptepe = sekme === "diptepe";
-  const tahmin = !ict && !video && !panel && !tarayici && !formasyon && !risk && !diptepe;
+  const formasyon = sekme === "formasyon", risk = sekme === "risk", diptepe = sekme === "diptepe", diptepe2 = sekme === "diptepe2";
+  const tahmin = !ict && !video && !panel && !tarayici && !formasyon && !risk && !diptepe && !diptepe2;
   document.querySelectorAll("button[data-sekme]").forEach(b => b.classList.toggle("aktif", b.dataset.sekme === sekme));
   document.querySelectorAll(".kart-ict").forEach(e => e.classList.toggle("gizli", !ict));
   document.querySelectorAll(".kart-video").forEach(e => e.classList.toggle("gizli", !video));
@@ -1413,11 +1441,13 @@ function sekmeUygula() {
   document.querySelectorAll(".kart-formasyon").forEach(e => e.classList.toggle("gizli", !formasyon));
   document.querySelectorAll(".kart-risk").forEach(e => e.classList.toggle("gizli", !risk));
   document.querySelectorAll(".kart-diptepe").forEach(e => e.classList.toggle("gizli", !diptepe));
+  document.querySelectorAll(".kart-diptepe2").forEach(e => e.classList.toggle("gizli", !diptepe2));
   if (formasyon) formasyonCiz();
-  $("alan").classList.toggle("gizli", tarayici || formasyon || diptepe);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
-  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon || risk || diptepe);
+  $("alan").classList.toggle("gizli", tarayici || formasyon || diptepe || diptepe2);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
+  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon || risk || diptepe || diptepe2);
   if (tarayici) tarayiciCek(true);
   if (diptepe) dtAc();
+  if (diptepe2) dt2Ac();
   $("poz-bilgi").classList.toggle("gizli", panel || risk);
   mum.applyOptions({ visible: !panel && !risk && !(tahmin && mumModu) });
   if (tahmin) mumSeri.applyOptions({ visible: mumModu });
@@ -1610,6 +1640,87 @@ function dtGoster(s) {
 function dtAc() { if (!dtSonuc.length || Date.now() - dtZaman > 600000) dtTara(); else if (dtSecili) dtGoster(dtSecili); }
 $("dt-tara").onclick = () => dtTara();
 setInterval(() => { if (sekme === "diptepe" && Date.now() - dtZaman > 600000) dtTara(); }, 60000);
+
+// ================== DIP / TEPE 2: pompalanmış coin ana dirençte → SHORT ==================
+// arastirma/ozellik.py + dogrula2.py: dist_lo >= %30 (7 gün dibinden) ve ana dirençte (>= 4 dönüş noktası, >= 2 kez %15+ düşüş).
+// Dip/Tepe sekmesinin saf fonksiyonlarını (dtKlines, dtAnaliz) kullanır; o sekmenin durumuna dokunmaz.
+let dt2Sonuc = [], dt2Taraniyor = false, dt2Zaman = 0, dt2Secili = null, dt2Grafik = null, dt2Mum = null, dt2Cizgi = [], dt2K = {};
+function dt2Durum(k, a) {
+  const t = k.length - 1, c = k[t].c;
+  let mn = Infinity; for (let i = t - 41; i <= t; i++) mn = Math.min(mn, k[i].l);
+  const h6 = Math.max(...k.slice(t - 5).map(x => x.h)), pompa = (c / mn - 1) * 100;
+  const zs = a.bolgeler.filter(z => z.taraf === "tepe" && z.ana && z.j.length >= 4);
+  const ic = zs.filter(z => h6 >= z.alt * 0.995 && c >= z.alt * 0.94 && c <= z.ust * 1.01).sort((x, y) => x.alt - y.alt)[0];
+  const yakin = zs.filter(z => z.alt > c && z.alt <= c * 1.10).sort((x, y) => x.alt - y.alt)[0];
+  return { pompa, dip7: mn, ic, yakin, sinyal: pompa >= 30 && !!ic, izle: pompa >= 30 && !ic && !!yakin };
+}
+async function dt2Tara() {
+  if (dt2Taraniyor) return;
+  dt2Taraniyor = true; $("dt2-tara").disabled = true;
+  try {
+    $("dt2-durum").textContent = " coin listesi alınıyor…";
+    const bilgi = await (await fetch("https://fapi.binance.com/fapi/v1/exchangeInfo")).json();
+    const coinler = new Set(bilgi.symbols.filter(x => x.contractType === "PERPETUAL" && x.quoteAsset === "USDT" && x.status === "TRADING"
+      && x.underlyingType === "COIN").map(x => x.symbol));
+    const tk = await (await fetch("https://fapi.binance.com/fapi/v1/ticker/24hr")).json();
+    const liste = tk.filter(x => coinler.has(x.symbol) && !DT_DEGIL.has(x.symbol)).sort((a, b) => +b.quoteVolume - +a.quoteVolume).slice(0, DT_ADET).map(x => x.symbol);
+    $("dt2-sayi").textContent = liste.length;
+    const sonuc = []; let bitti = 0; const toplam = liste.length;
+    const isci = async () => {
+      while (liste.length) {
+        const s = liste.shift();
+        try { const k = await dtKlines(s); if (k.length > 300) { dt2K[s] = k; const a = dtAnaliz(k); sonuc.push({ s, a, d: dt2Durum(k, a), fiyat: k[k.length - 1].c }); } } catch (e) {}
+        bitti++; $("dt2-durum").textContent = ` taranıyor… ${bitti}/${toplam}`;
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, isci));
+    dt2Sonuc = sonuc; dt2Zaman = Date.now();
+    $("dt2-durum").textContent = ` son tarama ${new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · ${sonuc.length} coin · sinyal ${sonuc.filter(x => x.d.sinyal).length}, izle ${sonuc.filter(x => x.d.izle).length}`;
+    dt2Tablolar();
+    if (!dt2Secili) { const ilk = dt2Sonuc.filter(x => x.d.sinyal).sort((a, b) => b.d.pompa - a.d.pompa)[0] || dt2Sonuc.filter(x => x.d.izle).sort((a, b) => b.d.pompa - a.d.pompa)[0]; if (ilk) dt2Goster(ilk.s); }
+  } catch (e) { $("dt2-durum").textContent = " tarama başarısız: " + e.message; }
+  dt2Taraniyor = false; $("dt2-tara").disabled = false;
+}
+function dt2Tablolar() {
+  const sin = dt2Sonuc.filter(x => x.d.sinyal).sort((a, b) => b.d.pompa - a.d.pompa);
+  const izl = dt2Sonuc.filter(x => x.d.izle).sort((a, b) => b.d.pompa - a.d.pompa);
+  const satir = (x, z, izle) => `<tr class="dt-satir${x.s === dt2Secili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b></td><td>${dtF(x.fiyat)}</td>
+    <td class="down">+%${x.d.pompa.toFixed(0)}</td><td>${dtF(z.alt)}–${dtF(z.ust)}</td><td class="dim">${z.j.length} nokta · ${z.seks.filter(v => v >= 0.15).map(v => "−%" + (v * 100).toFixed(0)).join(" ")}</td>
+    <td>${x.a.rsi.toFixed(0)}</td><td>${izle ? dtF(z.alt * 0.995) + ' <span class="dim">(%' + ((z.alt / x.fiyat - 1) * 100).toFixed(1) + ")</span>" : dtF(x.fiyat * 1.2)}</td></tr>`;
+  $("dt2-sinyal").innerHTML = sin.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>stop (+%20)</th></tr>` + sin.map(x => satir(x, x.d.ic, false)).join("")
+    : `<tr><td class="dim">Şu an kuralı sağlayan coin yok. (Testte günlerin ~%60'ında en az bir sinyal vardı.)</td></tr>`;
+  $("dt2-izle").innerHTML = izl.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>alarm (uzaklık)</th></tr>` + izl.map(x => satir(x, x.d.yakin, true)).join("")
+    : `<tr><td class="dim">Pompalanmış ve ana dirence yaklaşan coin yok.</td></tr>`;
+  document.querySelectorAll("#dt2-sinyal .dt-satir, #dt2-izle .dt-satir").forEach(r => r.onclick = () => { dt2Goster(r.dataset.s); sembolDegistir(r.dataset.s); });
+}
+function dt2Goster(s) {
+  dt2Secili = s; const k = dt2K[s], x = dt2Sonuc.find(y => y.s === s); if (!k || !x) return;
+  if (!dt2Grafik) {
+    dt2Grafik = LC.createChart($("dt2-chart"), { autoSize: true, layout: { background: { color: "#0f1115" }, textColor: "#c9ced8" },
+      grid: { vertLines: { color: "#1c2029" }, horzLines: { color: "#1c2029" } }, timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 4 } });
+    dt2Mum = dt2Grafik.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false, wickUpColor: "#26a69a", wickDownColor: "#ef5350" });
+  }
+  const hs = x.fiyat < 1 ? 6 : x.fiyat < 100 ? 4 : 2;
+  dt2Mum.applyOptions({ priceFormat: { type: "price", precision: hs, minMove: Math.pow(10, -hs) } });
+  dt2Mum.setData(k.map(b => ({ time: Math.floor(b.t / 1000) + DT_TZ, open: b.o, high: b.h, low: b.l, close: b.c })));
+  dt2Cizgi.forEach(c => dt2Mum.removePriceLine(c)); dt2Cizgi = [];
+  const z = x.d.ic || x.d.yakin, isaret = [];
+  if (z) {
+    dt2Cizgi.push(dt2Mum.createPriceLine({ price: z.alt, color: "#ef5350", lineWidth: 2, lineStyle: LS.Solid, axisLabelVisible: true, title: `ANA direnç ${z.j.length} nokta` }));
+    dt2Cizgi.push(dt2Mum.createPriceLine({ price: z.ust, color: "#ef5350", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: false, title: "" }));
+    z.j.forEach((j, i) => { if (z.seks[i] >= 0.15) isaret.push({ time: Math.floor(k[j].t / 1000) + DT_TZ, position: "aboveBar", color: "#ef5350", shape: "arrowDown", text: "−" + (z.seks[i] * 100).toFixed(0) + "%" }); });
+  }
+  dt2Cizgi.push(dt2Mum.createPriceLine({ price: x.d.dip7, color: "#8b93a3", lineWidth: 1, lineStyle: LS.Dotted, axisLabelVisible: true, title: "7 günlük dip" }));
+  if (x.d.sinyal) dt2Cizgi.push(dt2Mum.createPriceLine({ price: x.fiyat * 1.2, color: "#ffab91", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: "stop +%20" }));
+  dt2Mum.setMarkers(isaret.sort((a, b) => a.time - b.time));
+  dt2Grafik.timeScale().setVisibleLogicalRange({ from: k.length - 240, to: k.length + 4 });
+  $("dt2-baslik").innerHTML = `${s} · 4 saatlik · fiyat ${dtF(x.fiyat)} · 7 günlük dipten <span class="down">+%${x.d.pompa.toFixed(0)}</span> · RSI ${x.a.rsi.toFixed(0)} · ` +
+    (x.d.sinyal ? '<span class="down"><b>SİNYAL: kural sağlanıyor</b></span>' : x.d.izle ? "izle: ana dirence yaklaşıyor" : "kural sağlanmıyor") + ` <span class="dim">(oklar: bu dirençten geçmişteki düşüşler)</span>`;
+  document.querySelectorAll("#dt2-sinyal .dt-satir, #dt2-izle .dt-satir").forEach(r => r.classList.toggle("dt-secili", r.dataset.s === s));
+}
+function dt2Ac() { if (!dt2Sonuc.length || Date.now() - dt2Zaman > 600000) dt2Tara(); else if (dt2Secili) dt2Goster(dt2Secili); }
+$("dt2-tara").onclick = () => dt2Tara();
+setInterval(() => { if (sekme === "diptepe2" && Date.now() - dt2Zaman > 600000) dt2Tara(); }, 60000);
 
 // ================== HEDEF / RISK SEKMESI ==================
 // Girilen hedef ve stop için: seçilen süre içinde fiyat önce hangisine değer? (hesap: hesap.js riskOlasilik)
