@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202609292323"></script>
+<script src="hesap.js?v=202609301903"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -356,17 +356,18 @@ details.kavram p{margin:6px 0}
   <div class="card kart-diptepe2 gizli" style="grid-column:1/-1">
     <h2>Dip / Tepe 2 — pompalanmış coin ana dirençte → SHORT</h2>
     <div class="note" style="margin:0 0 10px"><b>Kural</b> (ilk yılda seçildi, ikinci yılda görmeden ölçüldü): fiyat <b>son 7 günün en düşüğünden en az %30 yukarıda</b> (pompa)
-      ve <b>ana dirence</b> değmiş — en az 4 dönüş noktası olan, en az 2 kez %15+ düşüş yaşatmış bölge. 4 saatlik mumlar, en likit <span id="dt2-sayi">100</span> coin.<br><b>Kullanım (kısa vade, 20x):</b> sinyal gelince SHORT, <b>hedef fiyatın %2 altı</b> (ROI +%40), <b>stop %1.5 üstü</b> (ROI −%30), hedef/stop olmazsa <b>en geç 4 saat – 1 gün içinde kapat</b>. Stop şart: stopsuz 20x'te pompalanmış coinde 2 saat içinde likidasyon %13–16.</div>
+      ve <b>ana dirence</b> değmiş — en az 4 dönüş noktası olan, en az 2 kez %15+ düşüş yaşatmış bölge. 4 saatlik mumlar, en likit <span id="dt2-sayi">100</span> coin.<br><b>Kullanım:</b> avantaj sadece <b>~7 gün tutmada</b> var; <b>1 gün ve altında yok</b> (1 gün sonra ortalama +%0.1, stoplu her ayarda ≈0 ya da eksi). Pozisyon içinde fiyat %45'e kadar yukarı gidebildiği için <b>sadece 1–2x kaldıraç</b>. <b>20x kısa vadeli oyun için uygun değil.</b></div>
     <div class="karolar" style="margin-bottom:10px">
-      <div class="karo"><div class="p-bas">İşlem başı, en geç 4 saat</div><b class="up">+%2.0 / +%3.2 ROI</b><small>ilk yıl / test yılı · rastgele short −%1.5 · 12$'da ≈ +$0.25–0.40</small></div>
-      <div class="karo"><div class="p-bas">İşlem başı, en geç 1 gün</div><b class="up">+%2.1 / +%3.7 ROI</b><small>ilk yıl / test yılı · rastgele short −%1.9</small></div>
-      <div class="karo"><div class="p-bas">Önce hedef / önce stop (4 saat)</div><b>%48 / %47</b><small>test yılı · kazanç (+%40) kayıptan (−%30) büyük olduğu için artı</small></div>
-      <div class="karo"><div class="p-bas">Güven</div><b style="color:#ffca28">orta-zayıf</b><small>60 hedef/stop/süre ayarının 49'u test yılında artı, rastgele hepsinde eksi; tek ayar t≈1.4</small></div>
+      <div class="karo"><div class="p-bas">7 gün sonra isabet</div><b class="up">%66 / %67</b><small>ilk yıl / test yılı · coin listeye düştüğü an short · rastgele short %55–57</small></div>
+      <div class="karo"><div class="p-bas">7 gün ortalama (stopsuz)</div><b class="up">+%3.9 / +%2.1</b><small>fiyat olarak · %20 stopla +%1.1 / +%0.3'e iner</small></div>
+      <div class="karo"><div class="p-bas">1 gün ve altı</div><b class="down">avantaj yok</b><small>1 gün sonra ort. +%0.1 · 20x hedef/stop ayarları gerçek kullanımda −%1…−%3 ROI</small></div>
+      <div class="karo"><div class="p-bas">Pozisyon içinde aleyhe</div><b class="down">medyan −%11</b><small>en kötü %10'da −%45…−%53 · <span style="color:#ffca28;font-weight:700">sadece 1–2x</span></small></div>
     </div>
-    <div class="note warn" style="margin:0 0 10px">Kazanan işlem oranı ~%50 — her iki işlemden biri stopla kapanıyor, kâr kazançların büyük olmasından geliyor; üst üste 4–5 stop normaldir.
-      Kural son çeyrekte zayıfladı (7 günlük isabet %46). 420 sinyal, 2 yıl, 5 dakikalık mumlarla ölçüldü (komisyon + stop kayması dahil).</div>
+    <div class="note warn" style="margin:0 0 10px"><b>Düzeltme (30 Eylül):</b> önceki sürümdeki "20x, hedef −%2 / stop +%1.5, en geç 4 saat–1 gün" önerisi kaldırıldı —
+      sadece "günün ilk sinyali" seçiminde artı çıkıyordu; coin listeye düştüğü an uygulanınca işlem başı −%1…−%3 ROI. 7 günlük sonuç ise hangi an seçilirse seçilsin %66–73 tutuyor.
+      Kural son çeyrekte zayıfladı (7 günlük isabet %46).</div>
     <div class="kontrol" style="padding:0 0 8px"><button id="dt2-tara">Yeniden tara</button><span class="dim" id="dt2-durum"></span></div>
-    <div id="dt2-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği, direnç bölgesi, 7 günlük dip, hedef ve stop burada açılır.</div>
+    <div id="dt2-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği, direnç bölgesi ve 7 günlük dip burada açılır.</div>
     <div id="dt2-chart"></div>
     <div class="dt-iki">
       <div style="overflow-x:auto"><h2 class="down">SİNYAL — kuralı şu an sağlayan (SHORT)</h2><table id="dt2-sinyal"></table></div>
@@ -1686,8 +1687,8 @@ function dt2Tablolar() {
   const izl = dt2Sonuc.filter(x => x.d.izle).sort((a, b) => b.d.pompa - a.d.pompa);
   const satir = (x, z, izle) => `<tr class="dt-satir${x.s === dt2Secili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b></td><td>${dtF(x.fiyat)}</td>
     <td class="down">+%${x.d.pompa.toFixed(0)}</td><td>${dtF(z.alt)}–${dtF(z.ust)}</td><td class="dim">${z.j.length} nokta · ${z.seks.filter(v => v >= 0.15).map(v => "−%" + (v * 100).toFixed(0)).join(" ")}</td>
-    <td>${x.a.rsi.toFixed(0)}</td>${izle ? '<td>' + dtF(z.alt * 0.995) + ' <span class="dim">(%' + ((z.alt / x.fiyat - 1) * 100).toFixed(1) + ")</span></td>" : '<td class="up">' + dtF(x.fiyat * 0.98) + '</td><td class="down">' + dtF(x.fiyat * 1.015) + '</td>'}</tr>`;
-  $("dt2-sinyal").innerHTML = sin.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>hedef (−%2)</th><th>stop (+%1.5)</th></tr>` + sin.map(x => satir(x, x.d.ic, false)).join("")
+    <td>${x.a.rsi.toFixed(0)}</td>${izle ? '<td>' + dtF(z.alt * 0.995) + ' <span class="dim">(%' + ((z.alt / x.fiyat - 1) * 100).toFixed(1) + ")</span></td>" : '<td class="dim">~7 gün · 1–2x</td>'}</tr>`;
+  $("dt2-sinyal").innerHTML = sin.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>kullanım</th></tr>` + sin.map(x => satir(x, x.d.ic, false)).join("")
     : `<tr><td class="dim">Şu an kuralı sağlayan coin yok. (Testte günlerin ~%60'ında en az bir sinyal vardı.)</td></tr>`;
   $("dt2-izle").innerHTML = izl.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>alarm (uzaklık)</th></tr>` + izl.map(x => satir(x, x.d.yakin, true)).join("")
     : `<tr><td class="dim">Pompalanmış ve ana dirence yaklaşan coin yok.</td></tr>`;
@@ -1711,14 +1712,10 @@ function dt2Goster(s) {
     z.j.forEach((j, i) => { if (z.seks[i] >= 0.15) isaret.push({ time: Math.floor(k[j].t / 1000) + DT_TZ, position: "aboveBar", color: "#ef5350", shape: "arrowDown", text: "−" + (z.seks[i] * 100).toFixed(0) + "%" }); });
   }
   dt2Cizgi.push(dt2Mum.createPriceLine({ price: x.d.dip7, color: "#8b93a3", lineWidth: 1, lineStyle: LS.Dotted, axisLabelVisible: true, title: "7 günlük dip" }));
-  if (x.d.sinyal) {
-    dt2Cizgi.push(dt2Mum.createPriceLine({ price: x.fiyat * 0.98, color: "#26a69a", lineWidth: 2, lineStyle: LS.Dashed, axisLabelVisible: true, title: "hedef −%2" }));
-    dt2Cizgi.push(dt2Mum.createPriceLine({ price: x.fiyat * 1.015, color: "#ffab91", lineWidth: 2, lineStyle: LS.Dashed, axisLabelVisible: true, title: "stop +%1.5" }));
-  }
   dt2Mum.setMarkers(isaret.sort((a, b) => a.time - b.time));
   dt2Grafik.timeScale().setVisibleLogicalRange({ from: k.length - 240, to: k.length + 4 });
   $("dt2-baslik").innerHTML = `${s} · 4 saatlik · fiyat ${dtF(x.fiyat)} · 7 günlük dipten <span class="down">+%${x.d.pompa.toFixed(0)}</span> · RSI ${x.a.rsi.toFixed(0)} · ` +
-    (x.d.sinyal ? '<span class="down"><b>SİNYAL: SHORT · hedef ' + dtF(x.fiyat * 0.98) + ' · stop ' + dtF(x.fiyat * 1.015) + ' · en geç 4 saat–1 gün</b></span>' : x.d.izle ? "izle: ana dirence yaklaşıyor" : "kural sağlanmıyor") + ` <span class="dim">(oklar: bu dirençten geçmişteki düşüşler)</span>`;
+    (x.d.sinyal ? '<span class="down"><b>SİNYAL: SHORT · ~7 gün tut · sadece 1–2x</b></span>' : x.d.izle ? "izle: ana dirence yaklaşıyor" : "kural sağlanmıyor") + ` <span class="dim">(oklar: bu dirençten geçmişteki düşüşler)</span>`;
   document.querySelectorAll("#dt2-sinyal .dt-satir, #dt2-izle .dt-satir").forEach(r => r.classList.toggle("dt-secili", r.dataset.s === s));
 }
 function dt2Ac() { if (!dt2Sonuc.length || Date.now() - dt2Zaman > 600000) dt2Tara(); else if (dt2Secili) dt2Goster(dt2Secili); }
