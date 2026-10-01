@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202609301903"></script>
+<script src="hesap.js?v=202610012220"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -342,6 +342,13 @@ details.kavram p{margin:6px 0}
     <div class="kontrol" style="padding:0 0 8px"><button id="dt-tara">Yeniden tara</button><span class="dim" id="dt-durum"></span></div>
     <div id="dt-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği ve bölgeleri burada açılır.</div>
     <div id="dt-chart"></div>
+    <div style="margin:14px 0 6px"><h2 class="up" style="margin-bottom:4px">LİDER — güç devam ediyor (LONG · hedef +%5 · en geç 1 gün)</h2>
+      <div class="note" style="margin:0 0 6px">Kural: fiyat 20 ortalamasının ≥1.5 ATR üstünde + MACD histogramı güçlü + <b>son 3 günde en çok birlikte hareket ettiği 5 coini ≥10 puan geçmiş</b>.
+        <b>Ölçüm</b> (120 coin, 2 yıl, ilk yıl seçildi / ikinci yıl ölçüldü): 1 gün içinde +%5'e değme <b>%55–58</b> (rastgele %27);
+        ortalama sonuç (hedef ya da 1 gün sonra kapanış) <b>+%0.1…+%0.8</b> fiyat — 200$ pozisyonda ≈ <b>+0.2…+1.5$</b> (rastgele −%0.15).
+        Girişin yapıldığı 6 saat diliminin hepsinde, iki yılda da rastgeleden iyi. Pozisyon içinde aleyhe: medyan −%5 (≈ −10$), en kötü %10'da −%13 (≈ −26$).
+        Kenar küçük ama tutarlı. <span class="dim">"Tüm zamanlarda çok düşmüş + dönüş" ve "tarihi tepede short" fikirleri de ölçüldü: test yılında tutmadı.</span></div>
+      <div style="overflow-x:auto"><table id="dt-lider"></table></div></div>
     <div class="dt-iki">
       <div style="overflow-x:auto"><h2 class="up">Ana destekte / yaklaşan (LONG adayı)</h2><table id="dt-dip"></table></div>
       <div style="overflow-x:auto"><h2 class="down">Ana dirençte / yaklaşan (SHORT adayı)</h2><table id="dt-tepe"></table></div>
@@ -1582,9 +1589,48 @@ async function dtTara() {
     dtSonuc = sonuc; dtZaman = Date.now();
     $("dt-durum").textContent = ` son tarama ${new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · ${sonuc.length} coin`;
     dtTablolar();
+    try { dtLiderYaz(); } catch (e) { $("dt-lider").innerHTML = '<tr><td class="warn">LİDER hesaplanamadı: ' + e.message + '</td></tr>'; }
     if (!dtSecili) { const ilk = dtSirali("dip")[0] || dtSirali("tepe")[0]; if (ilk) dtGoster(ilk.s); }
   } catch (e) { $("dt-durum").textContent = " tarama başarısız: " + e.message; }
   dtTaraniyor = false; $("dt-tara").disabled = false;
+}
+// ---- LİDER: güç devam (arastirma/arama3.py + dogrula4.py). Eşikler ilk yıldan: zema >= 1.534, macdh >= 0.594, akr_g3 <= -9.85
+function dtWilder(x, n) { const o = new Array(x.length).fill(NaN); let s = 0; for (let i = 1; i <= n; i++) s += x[i]; o[n] = s / n; for (let i = n + 1; i < x.length; i++) o[i] = (o[i - 1] * (n - 1) + x[i]) / n; return o; }
+function dtLiderHesapla() {
+  const veri = dtSonuc.map(x => ({ s: x.s, k: dtK[x.s] })).filter(x => x.k && x.k.length > 220);
+  // ortak zaman ızgarası: son 181 kapanış (180 getiri) — korelasyon; son 19 kapanış — 3 günlük getiri
+  const zaman = veri.map(v => new Map(v.k.map(b => [b.t, b.c])));
+  const sonT = Math.max(...veri.map(v => v.k[v.k.length - 1].t)), izg = []; for (let i = 180; i >= 0; i--) izg.push(sonT - i * 14400000);
+  const R = veri.map((v, j) => { const r = []; for (let i = 1; i < izg.length; i++) { const a = zaman[j].get(izg[i - 1]), b = zaman[j].get(izg[i]); r.push(a && b ? Math.log(b / a) : NaN); } return r; });
+  const r3 = veri.map((v, j) => { const a = zaman[j].get(sonT - 18 * 14400000), b = zaman[j].get(sonT); return a && b ? Math.log(b / a) : NaN; });
+  const yeter = R.map(r => r.filter(Number.isFinite).length >= 150);
+  const st = R.map(r => { const x = r.map(v => Number.isFinite(v) ? v : 0), m = x.reduce((a, b) => a + b, 0) / x.length; const z = x.map(v => v - m); return { z, sd: Math.sqrt(z.reduce((a, b) => a + b * b, 0) / x.length) + 1e-12 }; });
+  const out = [];
+  veri.forEach((v, j) => {
+    if (!yeter[j] || !Number.isFinite(r3[j]) || v.k[v.k.length - 1].t !== sonT) return;
+    const kor = [];
+    veri.forEach((w, i) => { if (i === j || !yeter[i] || w.s === "BTCUSDT" || !Number.isFinite(r3[i])) return;
+      let s = 0; for (let q = 0; q < st[j].z.length; q++) s += st[j].z[q] * st[i].z[q]; kor.push([s / (st[j].z.length * st[j].sd * st[i].sd), i]); });
+    kor.sort((a, b) => b[0] - a[0]); const p = kor.slice(0, 5); if (p.length < 5) return;
+    const akr = (p.reduce((a, [, i]) => a + r3[i], 0) / 5 - r3[j]) * 100;
+    const k = v.k, c = k.map(b => b.c), n = c.length;
+    const tr = k.map((b, i) => Math.max(b.h - b.l, Math.abs(b.h - (i ? c[i - 1] : c[0])), Math.abs(b.l - (i ? c[i - 1] : c[0]))));
+    const atr = dtWilder(tr, 14), e20 = dtEma(c, 20), e12 = dtEma(c, 12), e26 = dtEma(c, 26);
+    const m = c.map((x, i) => e12[i] - e26[i]), sg = dtEma(m, 9);
+    const zema = (c[n - 1] - e20[n - 1]) / atr[n - 1], macdh = (m[n - 1] - sg[n - 1]) / c[n - 1] * 100;
+    out.push({ s: v.s, fiyat: c[n - 1], zema, macdh, akr, r3d: (Math.exp(r3[j]) - 1) * 100, peers: p.map(([, i]) => veri[i].s.replace("USDT", "")),
+      lider: zema >= 1.534 && macdh >= 0.594 && akr <= -9.85 });
+  });
+  return out;
+}
+function dtLiderYaz() {
+  const L = dtLiderHesapla().filter(x => x.lider).sort((a, b) => a.akr - b.akr);
+  $("dt-lider").innerHTML = L.length ? `<tr><th>coin</th><th>fiyat</th><th>3 gün</th><th>akrabalarını geçti</th><th>akrabaları</th><th>EMA20 üstü</th><th>hedef (+%5)</th></tr>` +
+    L.map(x => `<tr class="dt-satir${x.s === dtSecili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b></td><td>${dtF(x.fiyat)}</td>
+      <td class="up">+%${x.r3d.toFixed(1)}</td><td class="up">+${(-x.akr).toFixed(1)} puan</td><td class="dim">${x.peers.join(", ")}</td>
+      <td>${x.zema.toFixed(1)} ATR</td><td class="up">${dtF(x.fiyat * 1.05)}</td></tr>`).join("")
+    : `<tr><td class="dim">Şu an LİDER koşulunu sağlayan coin yok (testte günlerin %92'sinde en az bir tane vardı).</td></tr>`;
+  document.querySelectorAll("#dt-lider .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
 }
 const DT_SIRA = { rsi: 0, macd: 1, bolge: 2, yakin: 3, kirik: 4 };
 const DT_AD = { dip: { rsi: "RSI döndü ↑", macd: "MACD döndü ↑", bolge: "destekte", yakin: "yaklaşıyor", kirik: "KIRILDI" },
