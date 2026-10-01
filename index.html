@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610012240"></script>
+<script src="hesap.js?v=202610012245"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -192,7 +192,7 @@ details.kavram p{margin:6px 0}
   <span class="dim" id="zaman"></span><span class="dim" id="benzer"></span>
 </header>
 <div class="kontrol sekme" id="sekmeler">
-  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="diptepe2">Dip / Tepe 2</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
+  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="diptepe2">Dip / Tepe uzun dönem</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
 </div>
 <div class="kontrol" id="tahmin-kontrol">
   <span class="dim">Geçmiş isabet çizgisi:</span>
@@ -361,7 +361,7 @@ details.kavram p{margin:6px 0}
       "Alarm" sütunu: fiyat bölgeye girdiği an (destek üstü / direnç altı) — Binance'te o fiyata alarm kurabilirsin.</div>
   </div>
   <div class="card kart-diptepe2 gizli" style="grid-column:1/-1">
-    <h2>Dip / Tepe 2 — pompalanmış coin ana dirençte → SHORT</h2>
+    <h2>Dip / Tepe uzun dönem (~7 gün) — pompalanmış coin ana dirençte → SHORT</h2>
     <div class="note" style="margin:0 0 10px"><b>Kural</b> (ilk yılda seçildi, ikinci yılda görmeden ölçüldü): fiyat <b>son 7 günün en düşüğünden en az %30 yukarıda</b> (pompa)
       ve <b>ana dirence</b> değmiş — en az 4 dönüş noktası olan, en az 2 kez %15+ düşüş yaşatmış bölge. 4 saatlik mumlar, en likit <span id="dt2-sayi">100</span> coin.<br><b>Kullanım:</b> avantaj sadece <b>~7 gün tutmada</b> var; <b>1 gün ve altında yok</b> (1 gün sonra ortalama +%0.1, stoplu her ayarda ≈0 ya da eksi). Pozisyon içinde fiyat %45'e kadar yukarı gidebildiği için <b>sadece 1–2x kaldıraç</b>. <b>20x kısa vadeli oyun için uygun değil.</b></div>
     <div class="karolar" style="margin-bottom:10px">
@@ -381,7 +381,7 @@ details.kavram p{margin:6px 0}
       <div style="overflow-x:auto"><h2>İZLE — pompalanmış, ana dirence %10'dan yakın</h2><table id="dt2-izle"></table></div>
     </div>
     <div class="note"><b>Düşüşten sonra alım (LONG):</b> iki yılda da tutan kural <b>bulunamadı</b>. En iyi aday ("RSI dipte + MACD derin negatif + BTC 200 ortalamasının altında")
-      ilk yılda 3 günde %59 tuttu, test yılında %41'e düştü; aşırı satılmış coinler 7 gün içinde medyan −%10…−%15 daha düşüyor. Bu yüzden burada LONG listesi yok.
+      ilk yılda 3 günde %59 tuttu, test yılında %41'e düştü; aşırı satılmış coinler 7 gün içinde medyan −%10…−%15 daha düşüyor. Kuralın birebir aynası da (7 günlük tepesinden %23+ düşmüş + ana destek ≥4 nokta) ölçüldü: 7 gün isabet %35–47, rastgele long %43–45 — çöken coinde destek çoğunlukla kırılıyor, son 2 yılda altcoinlerin çoğu düştü. Bu yüzden burada LONG listesi yok; kısa vadeli long için Dip / Tepe sekmesindeki LİDER listesine bak.
       Kullanılan göstergeler: RSI(14/2), Stokastik, CCI, MFI, Bollinger %B, EMA uzaklığı, ADX, MACD, hacim, fitiller, ardışık mumlar, 7/30 günlük getiri, BTC trendi, ana destek/direnç.</div>
   </div>
   <div class="card kart-tarayici gizli" style="grid-column:1/-1">
