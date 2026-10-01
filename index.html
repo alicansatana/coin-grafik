@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610012220"></script>
+<script src="hesap.js?v=202610012240"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -1596,8 +1596,8 @@ async function dtTara() {
 }
 // ---- LİDER: güç devam (arastirma/arama3.py + dogrula4.py). Eşikler ilk yıldan: zema >= 1.534, macdh >= 0.594, akr_g3 <= -9.85
 function dtWilder(x, n) { const o = new Array(x.length).fill(NaN); let s = 0; for (let i = 1; i <= n; i++) s += x[i]; o[n] = s / n; for (let i = n + 1; i < x.length; i++) o[i] = (o[i - 1] * (n - 1) + x[i]) / n; return o; }
-function dtLiderHesapla() {
-  const veri = dtSonuc.map(x => ({ s: x.s, k: dtK[x.s] })).filter(x => x.k && x.k.length > 220);
+function dtLiderHesapla(sonuc = dtSonuc, K = dtK) {
+  const veri = sonuc.map(x => ({ s: x.s, k: K[x.s] })).filter(x => x.k && x.k.length > 220);
   // ortak zaman ızgarası: son 181 kapanış (180 getiri) — korelasyon; son 19 kapanış — 3 günlük getiri
   const zaman = veri.map(v => new Map(v.k.map(b => [b.t, b.c])));
   const sonT = Math.max(...veri.map(v => v.k[v.k.length - 1].t)), izg = []; for (let i = 180; i >= 0; i--) izg.push(sonT - i * 14400000);
@@ -1624,11 +1624,16 @@ function dtLiderHesapla() {
   return out;
 }
 function dtLiderYaz() {
-  const L = dtLiderHesapla().filter(x => x.lider).sort((a, b) => a.akr - b.akr);
+  const L = dtLiderHesapla().filter(x => x.lider).map(x => {
+    const a = dtSonuc.find(y => y.s === x.s); x.direnc = !!(a && dtK[x.s] && dt2Durum(dtK[x.s], a).sinyal); return x;
+  }).sort((a, b) => (a.direnc - b.direnc) || (a.akr - b.akr));
   $("dt-lider").innerHTML = L.length ? `<tr><th>coin</th><th>fiyat</th><th>3 gün</th><th>akrabalarını geçti</th><th>akrabaları</th><th>EMA20 üstü</th><th>hedef (+%5)</th></tr>` +
     L.map(x => `<tr class="dt-satir${x.s === dtSecili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b></td><td>${dtF(x.fiyat)}</td>
       <td class="up">+%${x.r3d.toFixed(1)}</td><td class="up">+${(-x.akr).toFixed(1)} puan</td><td class="dim">${x.peers.join(", ")}</td>
-      <td>${x.zema.toFixed(1)} ATR</td><td class="up">${dtF(x.fiyat * 1.05)}</td></tr>`).join("")
+      <td>${x.zema.toFixed(1)} ATR</td><td class="up">${x.direnc ? '<span class="dt-rozet kirik" title="Ayrıca pompalanmış + ana dirençte (Dip/Tepe 2 SHORT sinyali)">⚠ ana dirençte de — long sayma</span>' : dtF(x.fiyat * 1.05)}</td></tr>`).join("")
+    + (L.some(x => x.direnc) ? `<tr><td colspan="7" class="note warn">⚠ işaretli coinler aynı anda <b>pompalanmış ve ana dirençte</b> (Dip/Tepe 2 SHORT sinyali). Geçmişte böyle durumlarda ilk gün yön belirsizdi:
+      1 gün içinde hem +%5'e hem −%5'e değme %60–70, fiyat +%30'a kadar sıçrayabildi; 7 günde ise düşüş daha olasıydı (short +%3.5 / +%4.2, isabet %61–66).
+      Bu coinler için LİDER'in 1 günlük long'u geçerli değil.</td></tr>` : "")
     : `<tr><td class="dim">Şu an LİDER koşulunu sağlayan coin yok (testte günlerin %92'sinde en az bir tane vardı).</td></tr>`;
   document.querySelectorAll("#dt-lider .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
 }
@@ -1729,12 +1734,15 @@ async function dt2Tara() {
   dt2Taraniyor = false; $("dt2-tara").disabled = false;
 }
 function dt2Tablolar() {
+  let lid = new Set(); try { lid = new Set(dtLiderHesapla(dt2Sonuc, dt2K).filter(x => x.lider).map(x => x.s)); } catch (e) {}
   const sin = dt2Sonuc.filter(x => x.d.sinyal).sort((a, b) => b.d.pompa - a.d.pompa);
   const izl = dt2Sonuc.filter(x => x.d.izle).sort((a, b) => b.d.pompa - a.d.pompa);
-  const satir = (x, z, izle) => `<tr class="dt-satir${x.s === dt2Secili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b></td><td>${dtF(x.fiyat)}</td>
+  const satir = (x, z, izle) => `<tr class="dt-satir${x.s === dt2Secili ? " dt-secili" : ""}" data-s="${x.s}"><td><b>${x.s.replace("USDT", "")}</b>${!izle && lid.has(x.s) ? ' <span class="dt-rozet kirik" title="Ayrıca LİDER: kısa vadede güç devam ediyor">⚠ ilk gün çok oynak</span>' : ""}</td><td>${dtF(x.fiyat)}</td>
     <td class="down">+%${x.d.pompa.toFixed(0)}</td><td>${dtF(z.alt)}–${dtF(z.ust)}</td><td class="dim">${z.j.length} nokta · ${z.seks.filter(v => v >= 0.15).map(v => "−%" + (v * 100).toFixed(0)).join(" ")}</td>
     <td>${x.a.rsi.toFixed(0)}</td>${izle ? '<td>' + dtF(z.alt * 0.995) + ' <span class="dim">(%' + ((z.alt / x.fiyat - 1) * 100).toFixed(1) + ")</span></td>" : '<td class="dim">~7 gün · 1–2x</td>'}</tr>`;
   $("dt2-sinyal").innerHTML = sin.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>kullanım</th></tr>` + sin.map(x => satir(x, x.d.ic, false)).join("")
+    + (sin.some(x => lid.has(x.s)) ? `<tr><td colspan="7" class="note warn">⚠ "ilk gün çok oynak": bu coin aynı zamanda LİDER (güç devam ediyor). Geçmişte böyle durumlarda fiyat 1 gün içinde +%30'a kadar sıçrayabildi;
+      haftalık düşüş yine de daha olasıydı (7 gün short +%3.5 / +%4.2, isabet %61–66). Kısa vadeli short için uygun değil; girilecekse küçük pozisyon, birkaç gün sabır.</td></tr>` : "")
     : `<tr><td class="dim">Şu an kuralı sağlayan coin yok. (Testte günlerin ~%60'ında en az bir sinyal vardı.)</td></tr>`;
   $("dt2-izle").innerHTML = izl.length ? `<tr><th>coin</th><th>fiyat</th><th>7g dipten</th><th>ana direnç</th><th>geçmiş</th><th>RSI</th><th>alarm (uzaklık)</th></tr>` + izl.map(x => satir(x, x.d.yakin, true)).join("")
     : `<tr><td class="dim">Pompalanmış ve ana dirence yaklaşan coin yok.</td></tr>`;
