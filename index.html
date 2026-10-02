@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610012323"></script>
+<script src="hesap.js?v=202610021859"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -107,6 +107,8 @@ body.ciz-acik #ciz-kanvas{pointer-events:auto;touch-action:none;cursor:crosshair
 #gr-ciz-bar .renk{width:20px;height:20px;border-radius:50%;border:2px solid #4a4f5a;padding:0;cursor:pointer}
 #gr-ciz-bar .renk.aktif{border-color:#fff}
 #gr-ciz-bar .ayrac{width:1px;height:18px;background:var(--line);margin:0 2px}
+.gr-alt-grafik{height:130px;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.gr-gosterge-baslik{font-size:12px;margin:0 0 3px}
 .gr-alt{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
 #gr-sr{width:100%;font-variant-numeric:tabular-nums}#gr-sr td,#gr-sr th{white-space:nowrap;padding:3px 6px}
 @media (max-width:980px){.gr-alt{grid-template-columns:1fr}}
@@ -366,6 +368,10 @@ details.kavram p{margin:6px 0}
         <span id="gr-ciz-renkler" style="display:flex;gap:4px"></span><span class="ayrac"></span>
         <button id="gr-ciz-geri" title="Son çizimi geri al">↶</button><button id="gr-ciz-temizle" title="Bu coindeki bütün çizimleri sil">🗑</button>
       </span></div></div>
+    <div class="gr-gosterge-baslik"><b>MACD (12, 26, 9)</b> <span class="dim">— çubuklar sıfırın üstünde ve büyüyorsa kısa vadeli güç yukarı, altında ve büyüyorsa aşağı; mavi çizgi turuncuyu yukarı keserse güç yukarı dönüyor</span></div>
+    <div id="gr-macd" class="gr-alt-grafik"></div>
+    <div class="gr-gosterge-baslik"><b>RSI (14)</b> <span class="dim">— 70 üstü aşırı alım (çok hızlı yükselmiş), 30 altı aşırı satım (çok hızlı düşmüş)</span></div>
+    <div id="gr-rsi" class="gr-alt-grafik" style="height:110px"></div>
     <div class="gr-alt">
       <div style="overflow-x:auto"><h2 style="margin:4px 0 6px">Destek / direnç seviyeleri (fiyata en yakın)</h2><table id="gr-sr"></table></div>
       <div class="note" style="margin-top:0"><b>Seviyeler nasıl okunur?</b> Her zaman dilimi kendi dönüş noktalarından seviye üretir: <b>1–5 dk</b>'da çok sayıda, zayıf;
@@ -382,6 +388,9 @@ details.kavram p{margin:6px 0}
     <div class="kontrol" style="padding:0 0 8px"><button id="dt-tara">Yeniden tara</button><span class="dim" id="dt-durum"></span></div>
     <div id="dt-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği ve bölgeleri burada açılır.</div>
     <div id="dt-chart"></div>
+    <div style="margin:14px 0 6px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><h2 style="margin:0 0 4px">Şu an girilebilecek pozisyonlar — her coin tek yön</h2>
+      <div class="note" style="margin:0 0 6px">Sadece geçmişte ölçülüp tutan kurallar. Bir coin hem LONG hem SHORT kuralına giriyorsa burada <b>yer almaz</b> (alttaki "pas geç" notuna düşer). Aşağıdaki listeler ayrıntı içindir; giriş kararı bu tablodan.</div>
+      <div style="overflow-x:auto"><table id="dt-karar"></table></div><div class="note" id="dt-karar-not" style="margin:6px 0 0"></div></div>
     <div style="margin:14px 0 6px"><h2 class="up" style="margin-bottom:4px">LİDER — güç devam ediyor (LONG · hedef +%5 · en geç 1 gün)</h2>
       <div class="note" style="margin:0 0 6px">Kural: fiyat 20 ortalamasının ≥1.5 ATR üstünde + MACD histogramı güçlü + <b>son 3 günde en çok birlikte hareket ettiği 5 coini ≥10 puan geçmiş</b>.
         <b>Ölçüm</b> (120 coin, 2 yıl, ilk yıl seçildi / ikinci yıl ölçüldü): 1 gün içinde +%5'e değme <b>%55–58</b> (rastgele %27);
@@ -390,8 +399,8 @@ details.kavram p{margin:6px 0}
         Kenar küçük ama tutarlı. <span class="dim">"Tüm zamanlarda çok düşmüş + dönüş" ve "tarihi tepede short" fikirleri de ölçüldü: test yılında tutmadı.</span></div>
       <div style="overflow-x:auto"><table id="dt-lider"></table></div></div>
     <div class="dt-iki">
-      <div style="overflow-x:auto"><h2 class="up">Ana destekte / yaklaşan (LONG adayı)</h2><table id="dt-dip"></table></div>
-      <div style="overflow-x:auto"><h2 class="down">Ana dirençte / yaklaşan (SHORT adayı)</h2><table id="dt-tepe"></table></div>
+      <div style="overflow-x:auto"><h2 class="up">Ana destekte / yaklaşan <span class="dim" style="font-size:12px;font-weight:400">(izleme — ölçümde long avantajı yok, buradan giriş yapma)</span></h2><table id="dt-dip"></table></div>
+      <div style="overflow-x:auto"><h2 class="down">Ana dirençte / yaklaşan <span class="dim" style="font-size:12px;font-weight:400">(sadece "RSI döndü ↓" ölçümde işe yaradı — 7 gün)</span></h2><table id="dt-tepe"></table></div>
     </div>
     <div class="note"><b>Durumların geçmişi</b> (120 coin, 2 yıl, 4 saatlik, 7 gün tutma, %0.10 maliyet — rastgele giriş: LONG +%0.30, SHORT −%0.50):
       <b class="up">RSI döndü</b> = bölgede RSI 35'i yukarı (dirençte 65'i aşağı) kesti → SHORT <b>+%0.74, isabet %62</b> (iki yarıda da rastgeleden iyi — tek belirgin kenar bu); LONG +%0.34, rastgeleden farksız.
@@ -1632,6 +1641,7 @@ async function dtTara() {
     $("dt-durum").textContent = ` son tarama ${new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} · ${sonuc.length} coin`;
     dtTablolar();
     try { dtLiderYaz(); } catch (e) { $("dt-lider").innerHTML = '<tr><td class="warn">LİDER hesaplanamadı: ' + e.message + '</td></tr>'; }
+    try { dtKararYaz(); } catch (e) { $("dt-karar").innerHTML = '<tr><td class="warn">Karar tablosu hesaplanamadı: ' + e.message + '</td></tr>'; }
     if (!dtSecili) { const ilk = dtSirali("dip")[0] || dtSirali("tepe")[0]; if (ilk) dtGoster(ilk.s); }
   } catch (e) { $("dt-durum").textContent = " tarama başarısız: " + e.message; }
   dtTaraniyor = false; $("dt-tara").disabled = false;
@@ -1678,6 +1688,32 @@ function dtLiderYaz() {
       Bu coinler için LİDER'in 1 günlük long'u geçerli değil.</td></tr>` : "")
     : `<tr><td class="dim">Şu an LİDER koşulunu sağlayan coin yok (testte günlerin %92'sinde en az bir tane vardı).</td></tr>`;
   document.querySelectorAll("#dt-lider .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
+}
+// ---- TEK KARAR: her coin için tek yön (ölçülmüş kurallar), çelişen coinler "pas geç"
+function dtKararYaz() {
+  let L = []; try { L = dtLiderHesapla(); } catch (e) {}
+  const lid = new Map(L.filter(x => x.lider).map(x => [x.s, x])), satir = [], pas = [];
+  for (const x of dtSonuc) {
+    const k = dtK[x.s]; if (!k) continue;
+    const d2 = dt2Durum(k, x), rsiTepe = !!(x.durum.tepe && x.durum.tepe.sinif === "rsi"), li = lid.get(x.s);
+    const kisa = d2.sinyal ? "pompa" : rsiTepe ? "rsi" : null;
+    if (li && kisa) { pas.push(x.s.replace("USDT", "")); continue; }
+    if (li) satir.push({ s: x.s, yon: "LONG", fiyat: x.fiyat, plan: `limit satış ${dtF(x.fiyat * 1.05)} (+%5)`, sure: "en geç 1 gün",
+      neden: `güç devam: 3 günde +%${li.r3d.toFixed(0)}, en yakın 5 akrabasını ${(-li.akr).toFixed(0)} puan geçti, MACD güçlü`,
+      olcum: "1 günde +%5'e değme %55–58 (rastgele %27); ort. +%0.1…+%0.8", sira: li.akr });
+    else if (kisa === "pompa") satir.push({ s: x.s, yon: "SHORT", fiyat: x.fiyat, plan: "küçük pozisyon, sabırlı", sure: "~7 gün",
+      neden: `7 günde dibinden +%${d2.pompa.toFixed(0)} pompa ve ana dirençte`, olcum: "7 gün sonra isabet %66–67, ort. +%2…+%4; arada sert ters gidebilir", sira: 1000 - d2.pompa });
+    else if (kisa === "rsi") satir.push({ s: x.s, yon: "SHORT", fiyat: x.fiyat, plan: "küçük pozisyon, sabırlı", sure: "~7 gün",
+      neden: "ana dirençte RSI 65'in altına döndü", olcum: "7 gün sonra isabet %62, ort. +%0.74 (rastgele short −%0.50)", sira: 2000 });
+  }
+  satir.sort((a, b) => (a.yon === b.yon ? a.sira - b.sira : a.yon === "LONG" ? -1 : 1));
+  $("dt-karar").innerHTML = satir.length ? `<tr><th>karar</th><th>coin</th><th>fiyat</th><th>plan</th><th>süre</th><th>neden</th><th>geçmiş ölçüm</th></tr>` + satir.map(r =>
+    `<tr class="dt-satir${r.s === dtSecili ? " dt-secili" : ""}" data-s="${r.s}"><td><span class="dt-rozet ${r.yon === "LONG" ? "rsi" : "rsi s"}">${r.yon}</span></td><td><b>${r.s.replace("USDT", "")}</b></td>
+      <td>${dtF(r.fiyat)}</td><td>${r.plan}</td><td>${r.sure}</td><td class="dim">${r.neden}</td><td class="dim">${r.olcum}</td></tr>`).join("")
+    : `<tr><td class="dim">Şu an ölçülmüş kurallardan hiçbiri sağlanmıyor — beklemek de bir karar.</td></tr>`;
+  $("dt-karar-not").innerHTML = (pas.length ? `<b>Pas geç (çok oynak, iki yöne de sert):</b> ${pas.join(", ")} — hem güç devam hem pompa/direnç sinyali var; geçmişte bu durumda 1 gün içinde hem +%5'e hem −%5'e değme %60–70, fiyat +%30'a kadar sıçrayabildi. `
+    : "") + `LONG = kısa vade (en geç 1 gün, +%5 limit satış). SHORT = uzun vade (~7 gün; kısa vadede bu sinyallerin avantajı ölçülmedi/yok). Aşağıdaki "ana destek" listesi ölçümde long avantajı göstermedi — oradan giriş yapma.`;
+  document.querySelectorAll("#dt-karar .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
 }
 const DT_SIRA = { rsi: 0, macd: 1, bolge: 2, yakin: 3, kirik: 4 };
 const DT_AD = { dip: { rsi: "RSI döndü ↑", macd: "MACD döndü ↑", bolge: "destekte", yakin: "yaklaşıyor", kirik: "KIRILDI" },
@@ -1913,6 +1949,46 @@ function grVeriBas() {
   for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].setData(grAcik.ema ? grK.map((b, i) => ({ time: grZaman(b), value: e[i] })).slice(n) : []); }
   $("gr-baslik").textContent = `${grSembol} · ${GR_AD[grTf]}`;
   grBilgi(null); grZ = grK.map(grZaman); grCizAnahtar = "";
+  grAltVeri();
+}
+// ---- MACD + RSI alt panelleri (ana grafikle birlikte kayar)
+let grMacdG = null, grMacdH, grMacdL, grMacdS, grRsiG = null, grRsiL, grSenk = false;
+function grAltOlustur() {
+  if (grMacdG || !grGrafik) return;
+  const ops = { autoSize: true, layout: { background: { color: "#0f1115" }, textColor: "#c9ced8" }, grid: { vertLines: { color: "#1c2029" }, horzLines: { color: "#1c2029" } },
+    timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 8 }, crosshair: { mode: 0 }, rightPriceScale: { minimumWidth: 80 } };
+  grGrafik.applyOptions({ rightPriceScale: { minimumWidth: 80 } });
+  grMacdG = LC.createChart($("gr-macd"), ops);
+  grMacdH = grMacdG.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false });
+  grMacdL = grMacdG.addLineSeries({ color: "#4fc3f7", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "MACD" });
+  grMacdS = grMacdG.addLineSeries({ color: "#ffb74d", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "sinyal" });
+  grRsiG = LC.createChart($("gr-rsi"), ops);
+  grRsiL = grRsiG.addLineSeries({ color: "#ce93d8", lineWidth: 1, priceLineVisible: false, crosshairMarkerVisible: false, title: "RSI" });
+  for (const [v, r] of [[70, "#ef5350"], [30, "#26a69a"], [50, "#4a4f5a"]]) grRsiL.createPriceLine({ price: v, color: r, lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: v !== 50, title: "" });
+  const senk = (k, h) => k.timeScale().subscribeVisibleLogicalRangeChange(r => { if (grSenk || !r) return; grSenk = true; h.forEach(g => g.timeScale().setVisibleLogicalRange(r)); grSenk = false; });
+  senk(grGrafik, [grMacdG, grRsiG]); senk(grMacdG, [grGrafik, grRsiG]); senk(grRsiG, [grGrafik, grMacdG]);
+}
+function grAltNokta(i, m, sg, R) {
+  const b = grK[i], t = grZaman(b), h = m[i] - sg[i], ho = i ? m[i - 1] - sg[i - 1] : h;
+  const renk = h >= 0 ? (h >= ho ? "#26a69a" : "rgba(38,166,154,.45)") : (h <= ho ? "#ef5350" : "rgba(239,83,80,.45)");
+  return { h: i < 34 ? { time: t } : { time: t, value: h, color: renk }, l: i < 34 ? { time: t } : { time: t, value: m[i] }, s: i < 34 ? { time: t } : { time: t, value: sg[i] },
+           r: i < 15 ? { time: t } : { time: t, value: R[i] } };
+}
+function grAltHesap() {
+  const c = grK.map(b => b.c), e12 = dtEma(c, 12), e26 = dtEma(c, 26), m = c.map((x, i) => e12[i] - e26[i]); return [m, dtEma(m, 9), dtRsi(c)];
+}
+function grAltVeri() {
+  grAltOlustur(); if (!grMacdG || !grK.length) return;
+  const [m, sg, R] = grAltHesap(), P = grK.map((_, i) => grAltNokta(i, m, sg, R));
+  const p = grK[grK.length - 1].c, hs = p < 0.01 ? 8 : p < 1 ? 6 : p < 100 ? 5 : 3, pf = { priceFormat: { type: "price", precision: hs, minMove: Math.pow(10, -hs) } };
+  [grMacdH, grMacdL, grMacdS].forEach(s => s.applyOptions(pf));
+  grMacdH.setData(P.map(x => x.h)); grMacdL.setData(P.map(x => x.l)); grMacdS.setData(P.map(x => x.s)); grRsiL.setData(P.map(x => x.r));
+  const r = grGrafik.timeScale().getVisibleLogicalRange(); if (r) { grMacdG.timeScale().setVisibleLogicalRange(r); grRsiG.timeScale().setVisibleLogicalRange(r); }
+}
+function grAltGuncelle() {
+  if (!grMacdG || grK.length < 40) return;
+  const [m, sg, R] = grAltHesap();
+  for (let i = grK.length - 3; i < grK.length; i++) { const x = grAltNokta(i, m, sg, R); grMacdH.update(x.h); grMacdL.update(x.l); grMacdS.update(x.s); grRsiL.update(x.r); }
 }
 async function grYukle() {
   if (!V || grYukleniyor) return;
@@ -1938,6 +2014,7 @@ async function grCanli() {
       if (grAcik.hacim) grHacim.update({ time: grZaman(b), value: b.v, color: b.c >= b.o ? "rgba(38,166,154,.45)" : "rgba(239,83,80,.45)" });
     }
     if (grAcik.ema) { const c = grK.map(b => b.c); for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].update({ time: grZaman(grK[grK.length - 1]), value: e[e.length - 1] }); } }
+    grAltGuncelle();
     if (yeni) { grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); }
     if (Date.now() - (grUst.zaman || 0) > 300000) {
       const [k1, k4] = await Promise.all([grKlines(grSembol, "1h", 1000), grKlines(grSembol, "4h", 1000)]);
