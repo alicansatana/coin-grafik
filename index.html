@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610031929"></script>
+<script src="hesap.js?v=202610032012"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -1588,7 +1588,7 @@ function sekmeUygula() {
   zincirSeri.forEach(x => x.applyOptions({ visible: tahmin }));
   hayaletSeri.forEach(x => x.applyOptions({ visible: tahmin }));
   if (tahmin) aralikUygula();
-  if (!V) return;
+  if (!V || !sonBar) return;   // coin değişirken yeni veri gelmeden sekmeye geçildi: çizimi ciz() yapacak
   ictCiz();
   videoCiz();
   srCiz();
