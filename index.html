@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610031847"></script>
+<script src="hesap.js?v=202610031929"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -89,6 +89,15 @@ body.ciz-acik #ciz-kanvas{pointer-events:auto;touch-action:none;cursor:crosshair
 .dt-rozet.macd{background:#2a2f3a;color:#c9ced8}.dt-rozet.bolge{background:#2d2a1a;color:#ffd54f}
 .dt-rozet.yakin{background:transparent;color:var(--dim);border:1px solid var(--line)}.dt-rozet.kirik{background:#3a2327;color:#ffab91}
 @media (max-width:980px){.dt-iki{grid-template-columns:1fr}#dt-chart{height:320px}}
+/* İşlemler (sanal hesap) */
+.is-bar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:#151922;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:6px;font-size:13px}
+.is-bar input{background:#0f1115;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+button.is-al{background:#173a33;border-color:var(--up);color:#80cbc4;font-weight:700}button.is-sat{background:#3a2327;border-color:var(--down);color:#ef9a9a;font-weight:700}
+.is-karolar{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:6px 0}
+.is-karolar .karo{background:#151922;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.is-karolar .karo b{display:block;font-size:18px;margin:2px 0}.is-karolar .karo small{color:var(--dim);font-size:11px;display:block}
+.is-tablo td,.is-tablo th,#is-isabet td,#is-isabet th{white-space:nowrap;padding:3px 6px;font-variant-numeric:tabular-nums}
+.is-tablo button{padding:2px 8px}
 /* Dip / Tepe 2 sekmesi */
 #dt2-chart{height:440px;margin-bottom:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .kart-diptepe2 .karo b{display:block;font-size:18px;margin:2px 0}
@@ -211,7 +220,7 @@ details.kavram p{margin:6px 0}
   <span class="dim" id="zaman"></span><span class="dim" id="benzer"></span>
 </header>
 <div class="kontrol sekme" id="sekmeler">
-  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="grafik">Grafik</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="diptepe2">Dip / Tepe uzun dönem</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
+  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="grafik">Grafik</button><button data-sekme="islem">İşlemler</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="diptepe2">Dip / Tepe uzun dönem</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button><button data-sekme="risk">Hedef / Risk</button>
 </div>
 <div class="kontrol" id="tahmin-kontrol">
   <span class="dim">Geçmiş isabet çizgisi:</span>
@@ -360,6 +369,16 @@ details.kavram p{margin:6px 0}
       <span class="gr-grup" id="gr-tf"><button data-tf="1m">1 dk</button><button data-tf="3m">3 dk</button><button data-tf="5m">5 dk</button><button data-tf="15m">15 dk</button><button data-tf="1h">1 saat</button><button data-tf="4h">4 saat</button></span>
       <span class="gr-grup" id="gr-ac"><button data-ac="ema">EMA 20/50/200</button><button data-ac="hacim">Hacim</button><button data-ac="sr_bu">S/R bu grafik</button><button data-ac="sr_1h">S/R 1 saat</button><button data-ac="sr_4h">S/R 4 saat</button></span>
     </div>
+    <div class="is-bar">
+      <b>Sanal işlem</b>
+      <label>Marjin $ <input id="is-marjin" type="number" value="10" min="1" step="1" style="width:64px"></label>
+      <span class="dim">× 20x = <b id="is-poz">200$</b> pozisyon</span>
+      <label title="Bu ROI'ye gelince kapat (boş = yok)">TP ROI % <input id="is-tp" type="number" min="1" placeholder="yok" style="width:62px"></label>
+      <label title="Bu kadar zarar ROI'sine gelince kapat, ör. 50 = −%50 ROI (boş = yok)">SL ROI % <input id="is-sl" type="number" min="1" placeholder="yok" style="width:62px"></label>
+      <input id="is-not" placeholder="not: neden girdim?" style="flex:1;min-width:120px">
+      <button id="is-long" class="is-al">BUY / LONG</button><button id="is-short" class="is-sat">SELL / SHORT</button>
+      <span id="is-mesaj" class="dim"></span>
+    </div>
     <div id="gr-bilgi" class="gr-bilgi">–</div>
     <div id="gr-chart"><div id="gr-ciz-bar">
       <button id="gr-ciz-ac" title="Grafiğe çizim yap">✏️</button>
@@ -406,6 +425,27 @@ details.kavram p{margin:6px 0}
         Seviyeler <b>tam çizgi değil bölgedir</b>: ölçümlerimizde en güçlü 4 saatlik bölgeler bile sık sık iğneyle delindi (bölgenin %1 altına konan stop %70 patladı).
         Grafik fareyle / parmakla kaydırılır ve yakınlaştırılır; ✏️ ile çizim yaparken kaydırma kapanır. Çizimler zaman+fiyat olarak saklanır, zaman dilimi değişince aynı yerde kalır.</div>
     </div>
+  </div>
+  <div class="card kart-islem gizli" style="grid-column:1/-1">
+    <h2 style="margin-top:0">İşlemler — sanal hesap (gerçek para yok) · 20x · cross</h2>
+    <div class="is-karolar" id="is-ozet"></div>
+    <div class="kontrol" style="padding:6px 0 10px;flex-wrap:wrap;gap:6px">
+      <label>Başlangıç bakiyesi $ <input id="is-bakiye" type="number" value="400" min="10" style="width:80px"></label>
+      <button id="is-sifirla">Hesabı sıfırla</button><button id="is-csv">CSV indir</button><button id="is-grafige">Yeni işlem aç → Grafik sekmesi</button>
+      <span id="is-durum" class="dim"></span>
+    </div>
+    <h2 style="margin:6px 0">Tahminlerin ne kadar tuttu?</h2>
+    <div style="overflow-x:auto"><table id="is-isabet"></table></div>
+    <h2 style="margin:14px 0 6px">Açık pozisyonlar</h2>
+    <div style="overflow-x:auto"><table id="is-acik" class="is-tablo"></table></div>
+    <h2 style="margin:14px 0 6px">Kapanan işlemler</h2>
+    <div style="overflow-x:auto"><table id="is-kapali" class="is-tablo"></table></div>
+    <div class="note">
+      <b>Nasıl hesaplanıyor?</b> Pozisyon = marjin × 20. <b>ROI</b> = fiyat değişimi × 20 (Binance'teki gibi, komisyonsuz). <b>Net $</b> = kâr/zarar − komisyon (açılış + kapanış, her biri pozisyonun %0.05'i; 200$'da toplam ≈ 0.20$).
+      <b>Cross:</b> bütün açık pozisyonlar sanal bakiyeyi ortak kullanır; likidasyon fiyatı bakiyeye göre hesaplanır (bakiye büyükse çok uzaktadır).
+      <b>1 / 3 / 5 / 24 saat</b> sütunları girişten o kadar sonraki ROI'dir. İşlemi erken kapatsan bile 24 saat dolana kadar izlenir ("kapatmasaydım ne olurdu").
+      TP/SL ve likidasyon sayfa kapalıyken de kaçmaz: sayfa açılınca 1 dakikalık mumlardan geriye dönük kontrol edilir (TP ve SL aynı dakikaya düşerse temkinli olarak SL sayılır).
+      Kayıtlar bu tarayıcıda saklanır; telefon ve bilgisayar ayrı hesaptır.</div>
   </div>
   <div class="card kart-diptepe gizli" style="grid-column:1/-1">
     <h2>Dip / Tepe — ana destekte dönen, ana dirençte dönen coinler</h2>
@@ -1514,8 +1554,8 @@ function gorunumAyarla() {
 
 function sekmeUygula() {
   const ict = sekme === "ict", video = sekme === "video", panel = sekme === "panel", tarayici = sekme === "tarayici";
-  const formasyon = sekme === "formasyon", risk = sekme === "risk", diptepe = sekme === "diptepe", diptepe2 = sekme === "diptepe2", grafik = sekme === "grafik";
-  const tahmin = !ict && !video && !panel && !tarayici && !formasyon && !risk && !diptepe && !diptepe2 && !grafik;
+  const formasyon = sekme === "formasyon", risk = sekme === "risk", diptepe = sekme === "diptepe", diptepe2 = sekme === "diptepe2", grafik = sekme === "grafik", islem = sekme === "islem";
+  const tahmin = !ict && !video && !panel && !tarayici && !formasyon && !risk && !diptepe && !diptepe2 && !grafik && !islem;
   document.querySelectorAll("button[data-sekme]").forEach(b => b.classList.toggle("aktif", b.dataset.sekme === sekme));
   document.querySelectorAll(".kart-ict").forEach(e => e.classList.toggle("gizli", !ict));
   document.querySelectorAll(".kart-video").forEach(e => e.classList.toggle("gizli", !video));
@@ -1526,13 +1566,15 @@ function sekmeUygula() {
   document.querySelectorAll(".kart-diptepe").forEach(e => e.classList.toggle("gizli", !diptepe));
   document.querySelectorAll(".kart-diptepe2").forEach(e => e.classList.toggle("gizli", !diptepe2));
   document.querySelectorAll(".kart-grafik").forEach(e => e.classList.toggle("gizli", !grafik));
+  document.querySelectorAll(".kart-islem").forEach(e => e.classList.toggle("gizli", !islem));
   if (formasyon) formasyonCiz();
-  $("alan").classList.toggle("gizli", tarayici || formasyon || diptepe || diptepe2 || grafik);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
-  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon || risk || diptepe || diptepe2 || grafik);
+  $("alan").classList.toggle("gizli", tarayici || formasyon || diptepe || diptepe2 || grafik || islem);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
+  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon || risk || diptepe || diptepe2 || grafik || islem);
   if (tarayici) tarayiciCek(true);
   if (diptepe) dtAc();
   if (diptepe2) dt2Ac();
   if (grafik) grAc();
+  if (islem) isCiz();
   $("poz-bilgi").classList.toggle("gizli", panel || risk);
   mum.applyOptions({ visible: !panel && !risk && !(tahmin && mumModu) });
   if (tahmin) mumSeri.applyOptions({ visible: mumModu });
@@ -1975,7 +2017,7 @@ function grVeriBas() {
   for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].setData(grAcik.ema ? grK.map((b, i) => ({ time: grZaman(b), value: e[i] })).slice(n) : []); }
   $("gr-baslik").textContent = `${grSembol} · ${GR_AD[grTf]}`;
   grBilgi(null); grZ = grK.map(grZaman); grCizAnahtar = "";
-  grAltVeri();
+  grAltVeri(); isGrCiz();
 }
 // ---- MACD + RSI alt panelleri (ana grafikle birlikte kayar)
 let grMacdG = null, grMacdH, grMacdL, grMacdS, grRsiG = null, grRsiL, grSenk = false;
@@ -2076,6 +2118,173 @@ document.querySelectorAll("#gr-ac [data-ac]").forEach(b => b.onclick = () => {
 });
 grDugmeler();
 function grAc() { grOlustur(); if (!grK.length || (V && V.symbol !== grSembol)) grYukle(); }
+// ================== İŞLEMLER: sanal (kağıt üstü) hesap, 20x cross ==================
+const IS_KAL = 20, IS_KOM = 0.0005, IS_MM = 0.005, IS_SAAT = [1, 3, 5, 24];
+let IS = { bakiye0: 400, acik: [], kapali: [], no: 0 }, isFiyat = {}, isSonTarama = 0, isTaraniyor = false, isGrCizgi = [];
+try { const x = JSON.parse(localStorage.getItem("islemler_v1") || "null"); if (x && Array.isArray(x.acik)) IS = x; } catch (e) {}
+function isKaydet() { try { localStorage.setItem("islemler_v1", JSON.stringify(IS)); } catch (e) {} }
+const isRoi = (p, x) => x.yon * (p / x.giris - 1) * IS_KAL * 100;
+const isPnl = (p, x) => x.yon * (p - x.giris) * x.q;
+const isSure = ms => { const d = Math.floor(ms / 60000); return d < 60 ? d + " dk" : d < 1440 ? Math.floor(d / 60) + " sa " + (d % 60) + " dk" : Math.floor(d / 1440) + " gün " + Math.floor(d % 1440 / 60) + " sa"; };
+const isYuzde = (v, ondalik = 0) => v === undefined || v === null || !Number.isFinite(v) ? '<span class="dim">–</span>' : `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${v.toFixed(ondalik)}%</span>`;
+const isDolar = v => `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}$</span>`;
+function isCuzdan() { return IS.bakiye0 + IS.kapali.reduce((a, x) => a + x.net, 0) - IS.acik.reduce((a, x) => a + x.komAc, 0); }
+function isAnlik(x) { return isFiyat[x.s] || x.fiyat || x.giris; }
+function isLik(x) {
+  // cross: diğer pozisyonlar şimdiki fiyatta sabit tutulursa bu pozisyonun likidasyon fiyatı
+  let A = isCuzdan(); for (const y of IS.acik) if (y !== x) { const p = isAnlik(y); A += isPnl(p, y) - IS_MM * y.q * p; }
+  const P = x.yon > 0 ? (x.q * x.giris - A) / ((1 - IS_MM) * x.q) : (A + x.q * x.giris) / ((1 + IS_MM) * x.q);
+  return P > 0 ? P : null;
+}
+function isKapat(x, fiyat, neden, zaman) {
+  const i = IS.acik.indexOf(x); if (i < 0) return;
+  IS.acik.splice(i, 1);
+  x.cikis = fiyat; x.t1 = zaman || Date.now(); x.neden = neden; x.roi = isRoi(fiyat, x);
+  x.komKap = IS_KOM * fiyat * x.q; x.net = isPnl(fiyat, x) - x.komAc - x.komKap;
+  IS.kapali.unshift(x); isKaydet();
+}
+// bir fiyat aralığını (mum ya da anlık fiyat) pozisyona uygula; true = kapandı
+function isUygula(x, lo, hi, kapanis, zamanSon) {
+  const kotu = x.yon > 0 ? lo : hi, iyi = x.yon > 0 ? hi : lo;
+  for (const H of IS_SAAT) if (x.anlar[H] === undefined && zamanSon >= x.t0 + H * 3600000) x.anlar[H] = isRoi(kapanis, x);
+  if (x.cikis !== undefined) return false;   // kapanmış işlem: sadece 1/3/5/24 saat takibi
+  x.mae = Math.min(x.mae, isRoi(kotu, x)); x.mfe = Math.max(x.mfe, isRoi(iyi, x));
+  const lik = isLik(x);
+  if (lik && (x.yon > 0 ? kotu <= lik : kotu >= lik)) {
+    const kalan = IS.acik.filter(y => y !== x);
+    isKapat(x, lik, "LİKİDASYON", zamanSon); kalan.forEach(y => isKapat(y, isAnlik(y), "likidasyon (cross: bakiye bitti)", zamanSon)); return true;
+  }
+  if (x.sl && isRoi(kotu, x) <= -x.sl) { isKapat(x, x.giris * (1 - x.yon * x.sl / (IS_KAL * 100)), "SL", zamanSon); return true; }
+  if (x.tp && isRoi(iyi, x) >= x.tp) { isKapat(x, x.giris * (1 + x.yon * x.tp / (IS_KAL * 100)), "TP", zamanSon); return true; }
+  return false;
+}
+async function isFiyatlar() {
+  const d = await (await fetch("https://fapi.binance.com/fapi/v1/ticker/price")).json();
+  if (Array.isArray(d)) for (const x of d) isFiyat[x.symbol] = +x.price;
+}
+async function isAc(yon) {
+  const s = grSembol || (V && V.symbol), marjin = +$("is-marjin").value;
+  if (!s) return isMesaj("Önce bir coin seç.", true);
+  if (!(marjin > 0)) return isMesaj("Marjin gir.", true);
+  let p = null;
+  try { const d = await (await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${s}`)).json(); p = +d.price; } catch (e) {}
+  if (!(p > 0) && grK.length && grSembol === s) p = grK[grK.length - 1].c;
+  if (!(p > 0)) return isMesaj("Fiyat alınamadı, tekrar dene.", true);
+  const q = marjin * IS_KAL / p, komAc = IS_KOM * p * q;
+  const ozv = isCuzdan() + IS.acik.reduce((a, x) => a + isPnl(isAnlik(x), x), 0), kullanilan = IS.acik.reduce((a, x) => a + x.marjin, 0);
+  if (ozv - kullanilan < marjin + komAc) return isMesaj(`Sanal bakiye yetmiyor (boşta ${(ozv - kullanilan).toFixed(2)}$).`, true);
+  const tp = +$("is-tp").value || null, sl = +$("is-sl").value || null;
+  IS.acik.push({ id: ++IS.no, s, yon, giris: p, marjin, q, t0: Date.now(), tp, sl, not: $("is-not").value.trim(), komAc, mae: 0, mfe: 0, anlar: {}, kontrol: Date.now(), fiyat: p });
+  isFiyat[s] = p; isKaydet(); $("is-not").value = "";
+  isMesaj(`${yon > 0 ? "LONG" : "SHORT"} açıldı: ${s.replace("USDT", "")} @ ${grF(p)} · ${marjin}$ × 20x`);
+  isGrCiz(); if (sekme === "islem") isCiz();
+}
+function isMesaj(m, hata) { $("is-mesaj").innerHTML = `<span class="${hata ? "warn" : "up"}">${m}</span>`; clearTimeout(isMesaj.z); isMesaj.z = setTimeout(() => $("is-mesaj").innerHTML = "", 8000); }
+// sayfa kapalıyken olanlar: 1 dk mumlardan geriye dönük (3 günden eskiyse 5 dk)
+async function isGeriye() {
+  if (isTaraniyor) return; isTaraniyor = true;
+  try {
+    const simdi = Date.now();
+    const izle = IS.acik.concat(IS.kapali.filter(x => IS_SAAT.some(H => x.anlar[H] === undefined) && x.t0 + 25 * 3600000 > simdi - 86400000 * 30));
+    for (const x of izle) {
+      const bas = Math.max(x.kontrol || x.t0, x.t0);
+      if (simdi - bas < 120000) continue;
+      const tf = simdi - bas > 3 * 86400000 ? "5m" : "1m", ms = tf === "5m" ? 300000 : 60000;
+      const d = await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${x.s}&interval=${tf}&startTime=${Math.floor(bas / ms) * ms + ms}&limit=1000`)).json();
+      if (!Array.isArray(d)) continue;
+      for (const k of d) {
+        const kapanis = k[6];
+        if (kapanis >= simdi) break;
+        if (isUygula(x, +k[3], +k[2], +k[4], kapanis + 1)) { x.kontrol = kapanis + 1; break; }
+        x.kontrol = kapanis + 1;
+        if (x.cikis !== undefined && IS_SAAT.every(H => x.anlar[H] !== undefined)) break;
+      }
+    }
+    isKaydet(); isSonTarama = Date.now();
+  } catch (e) {}
+  isTaraniyor = false;
+}
+async function isTik() {
+  if (!IS.acik.length && sekme !== "islem") return;
+  try { await isFiyatlar(); } catch (e) { return; }
+  const simdi = Date.now();
+  for (const x of IS.acik.slice()) { const p = isFiyat[x.s]; if (!p) continue; x.fiyat = p; isUygula(x, p, p, p, simdi); }
+  for (const x of IS.kapali) if (x.t0 + 24 * 3600000 >= simdi - 60000 && IS_SAAT.some(H => x.anlar[H] === undefined) && isFiyat[x.s] && simdi - (x.kontrol || 0) < 180000)
+    { isUygula(x, isFiyat[x.s], isFiyat[x.s], isFiyat[x.s], simdi); x.kontrol = simdi; }
+  isKaydet();
+  if (simdi - isSonTarama > 300000) isGeriye();
+  if (sekme === "islem") isCiz();
+  isGrCiz();
+}
+setInterval(isTik, 5000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { isSonTarama = 0; isTik(); } });
+function isGrCiz() {
+  if (typeof grMum === "undefined" || !grMum) return;
+  isGrCizgi.forEach(c => grMum.removePriceLine(c)); isGrCizgi = [];
+  for (const x of IS.acik.filter(y => y.s === grSembol)) {
+    const ad = x.yon > 0 ? "LONG" : "SHORT", roi = isRoi(isAnlik(x), x);
+    isGrCizgi.push(grMum.createPriceLine({ price: x.giris, color: "#ffd54f", lineWidth: 2, lineStyle: LS.Solid, axisLabelVisible: true, title: `${ad} giriş · ROI ${roi >= 0 ? "+" : ""}${roi.toFixed(0)}%` }));
+    if (x.tp) isGrCizgi.push(grMum.createPriceLine({ price: x.giris * (1 + x.yon * x.tp / 2000), color: "#26a69a", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: `TP +${x.tp}%` }));
+    if (x.sl) isGrCizgi.push(grMum.createPriceLine({ price: x.giris * (1 - x.yon * x.sl / 2000), color: "#ef5350", lineWidth: 1, lineStyle: LS.Dashed, axisLabelVisible: true, title: `SL −${x.sl}%` }));
+  }
+}
+function isCiz() {
+  const simdi = Date.now(), K = IS.kapali, acikPnl = IS.acik.reduce((a, x) => a + isPnl(isAnlik(x), x), 0), cuz = isCuzdan();
+  const kaz = K.filter(x => x.net > 0), kay = K.filter(x => x.net <= 0), top = K.reduce((a, x) => a + x.net, 0);
+  const karo = (ad, deger, alt) => `<div class="karo"><small>${ad}</small><b>${deger}</b>${alt ? `<small>${alt}</small>` : ""}</div>`;
+  $("is-ozet").innerHTML = karo("Özvarlık (bakiye + açık K/Z)", `${(cuz + acikPnl).toFixed(2)}$`, `başlangıç ${IS.bakiye0}$ · ${isDolar(cuz + acikPnl - IS.bakiye0)}`)
+    + karo("Kapanan işlemler net", isDolar(top), `${K.length} işlem · komisyon ${K.reduce((a, x) => a + x.komAc + x.komKap, 0).toFixed(2)}$`)
+    + karo("Toplam kazanç / zarar", `<span class="up">+${kaz.reduce((a, x) => a + x.net, 0).toFixed(2)}$</span> / <span class="down">−${Math.abs(kay.reduce((a, x) => a + x.net, 0)).toFixed(2)}$</span>`, `${kaz.length} kazanan · ${kay.length} kaybeden`)
+    + karo("İsabet (net > 0)", K.length ? `%${(kaz.length / K.length * 100).toFixed(0)}` : "–", K.length ? `ort. ROI ${isYuzde(K.reduce((a, x) => a + x.roi, 0) / K.length, 1)}` : "henüz kapanan yok")
+    + karo("Açık pozisyonlar", `${IS.acik.length}`, `K/Z ${isDolar(acikPnl)} · marjin ${IS.acik.reduce((a, x) => a + x.marjin, 0)}$`);
+  // isabet: tüm işlemler (açık + kapalı), girişten H saat sonra ROI > 0 mı
+  const hep = IS.acik.concat(K);
+  let ih = `<tr><th></th>${IS_SAAT.map(H => `<th>${H} saat sonra</th>`).join("")}</tr>`;
+  for (const [ad, f] of [["Hepsi", () => true], ["LONG", x => x.yon > 0], ["SHORT", x => x.yon < 0]]) {
+    ih += `<tr><td><b>${ad}</b></td>` + IS_SAAT.map(H => { const v = hep.filter(f).map(x => x.anlar[H]).filter(v => v !== undefined);
+      return `<td>${v.length ? `yön doğru <b>%${(v.filter(r => r > 0).length / v.length * 100).toFixed(0)}</b> · ort. ROI ${isYuzde(v.reduce((a, b) => a + b, 0) / v.length)} <span class="dim">(${v.length} işlem)</span>` : '<span class="dim">–</span>'}</td>`; }).join("") + "</tr>";
+  }
+  $("is-isabet").innerHTML = ih + `<tr><td colspan="5" class="dim">Yazı-tura %50'dir. Komisyon 20x'te her işlemde ≈ %2 ROI götürür; anlamlı bir sonuç için en az 30–50 işlem gerekir.</td></tr>`;
+  const anlar = x => IS_SAAT.map(H => `<td>${isYuzde(x.anlar[H])}</td>`).join("");
+  $("is-acik").innerHTML = IS.acik.length ? `<tr><th>coin</th><th>yön</th><th>giriş</th><th>anlık</th><th>marjin</th><th>ROI</th><th>K/Z</th><th>süre</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th>en kötü / en iyi</th><th>TP / SL</th><th>likidasyon</th><th>not</th><th></th></tr>` +
+    IS.acik.map(x => { const p = isAnlik(x), lik = isLik(x); return `<tr><td><a href="#" class="is-git" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td>
+      <td><span class="dt-rozet ${x.yon > 0 ? "rsi" : "rsi s"}">${x.yon > 0 ? "LONG" : "SHORT"}</span></td><td>${grF(x.giris)}</td><td>${grF(p)}</td><td>${x.marjin}$</td>
+      <td><b>${isYuzde(isRoi(p, x), 1)}</b></td><td>${isDolar(isPnl(p, x))}</td><td>${isSure(simdi - x.t0)}</td>${anlar(x)}
+      <td>${isYuzde(x.mae)} / ${isYuzde(x.mfe)}</td><td>${x.tp ? "+" + x.tp + "%" : "–"} / ${x.sl ? "−" + x.sl + "%" : "–"}</td>
+      <td class="dim">${lik ? grF(lik) + ` (${((lik / p - 1) * 100).toFixed(0)}%)` : "yok"}</td><td class="dim">${x.not || ""}</td><td><button class="is-kapat" data-id="${x.id}">Kapat</button></td></tr>`; }).join("")
+    : `<tr><td class="dim">Açık pozisyon yok. Grafik sekmesindeki BUY / LONG ya da SELL / SHORT düğmesiyle aç.</td></tr>`;
+  $("is-kapali").innerHTML = K.length ? `<tr><th>coin</th><th>yön</th><th>giriş → çıkış</th><th>marjin</th><th>ROI</th><th>net</th><th>süre</th><th>kapanış</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th>en kötü / en iyi</th><th>not</th><th>tarih</th><th></th></tr>` +
+    K.map(x => `<tr><td><a href="#" class="is-git" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td><td><span class="dt-rozet ${x.yon > 0 ? "rsi" : "rsi s"}">${x.yon > 0 ? "LONG" : "SHORT"}</span></td>
+      <td>${grF(x.giris)} → ${grF(x.cikis)}</td><td>${x.marjin}$</td><td><b>${isYuzde(x.roi, 1)}</b></td><td>${isDolar(x.net)}</td><td>${isSure(x.t1 - x.t0)}</td>
+      <td>${x.neden === "elle" ? "elle" : `<b class="${x.neden === "TP" ? "up" : "down"}">${x.neden}</b>`}</td>${anlar(x)}<td>${isYuzde(x.mae)} / ${isYuzde(x.mfe)}</td>
+      <td class="dim">${x.not || ""}</td><td class="dim">${new Date(x.t0).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+      <td><button class="is-sil" data-id="${x.id}" title="Bu kaydı sil">×</button></td></tr>`).join("")
+    : `<tr><td class="dim">Henüz kapanan işlem yok.</td></tr>`;
+  document.querySelectorAll(".is-kapat").forEach(b => b.onclick = () => { const x = IS.acik.find(y => y.id === +b.dataset.id); if (x) { isKapat(x, isAnlik(x), "elle"); isCiz(); isGrCiz(); } });
+  document.querySelectorAll(".is-sil").forEach(b => b.onclick = () => { if (confirm("Bu işlem kaydı silinsin mi?")) { IS.kapali = IS.kapali.filter(y => y.id !== +b.dataset.id); isKaydet(); isCiz(); } });
+  document.querySelectorAll(".is-git").forEach(a => a.onclick = e => { e.preventDefault(); isGrafigeGit(a.dataset.s); });
+  $("is-bakiye").value = IS.bakiye0;
+  $("is-durum").textContent = isSonTarama ? ` son kontrol ${new Date(isSonTarama).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}` : "";
+}
+function isGrafigeGit(s) {
+  sekme = "grafik"; try { localStorage.setItem("sekme", sekme); } catch (e) {}
+  if (s && (!V || V.symbol !== s)) sembolDegistir(s);
+  sekmeUygula();
+}
+$("is-long").onclick = () => isAc(1);
+$("is-short").onclick = () => isAc(-1);
+$("is-marjin").oninput = () => $("is-poz").textContent = ((+$("is-marjin").value || 0) * IS_KAL).toFixed(0) + "$";
+$("is-grafige").onclick = () => isGrafigeGit(null);
+$("is-bakiye").onchange = () => { const v = +$("is-bakiye").value; if (v > 0) { IS.bakiye0 = v; isKaydet(); isCiz(); } };
+$("is-sifirla").onclick = () => { if (confirm("Bütün sanal işlemler silinip hesap sıfırlansın mı?")) { IS = { bakiye0: +$("is-bakiye").value || 400, acik: [], kapali: [], no: 0 }; isKaydet(); isCiz(); isGrCiz(); } };
+$("is-csv").onclick = () => {
+  const satir = [["coin", "yon", "giris", "cikis", "marjin", "roi", "net", "acilis", "kapanis", "neden", "roi_1s", "roi_3s", "roi_5s", "roi_24s", "en_kotu", "en_iyi", "not"]];
+  for (const x of IS.kapali.concat(IS.acik)) satir.push([x.s, x.yon > 0 ? "LONG" : "SHORT", x.giris, x.cikis ?? "", x.marjin, (x.roi ?? isRoi(isAnlik(x), x)).toFixed(2), x.net !== undefined ? x.net.toFixed(4) : "",
+    new Date(x.t0).toISOString(), x.t1 ? new Date(x.t1).toISOString() : "", x.neden || "açık", ...IS_SAAT.map(H => x.anlar[H] !== undefined ? x.anlar[H].toFixed(2) : ""), x.mae.toFixed(2), x.mfe.toFixed(2), `"${(x.not || "").replace(/"/g, "'")}"`]);
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([satir.map(r => r.join(",")).join("\n")], { type: "text/csv" }));
+  a.download = `sanal_islemler_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+};
+isGeriye().then(() => { if (sekme === "islem") isCiz(); isGrCiz(); });
 // --- çizim (Tahmin sekmesindeki ile aynı mantık; zaman+fiyat olarak saklanır, zaman dilimi değişince yerinde kalır)
 const GR_RENK = ["#ffd54f", "#4fc3f7", "#81c784", "#ff8a80", "#e6e8ec"];
 let grCizimler = [], grCizModu = false, grCizTipi = "serbest", grCizRenk = GR_RENK[0], grCizAktif = null, grZ = [], grCizAnahtar = "", grKanvas = null, grCtx = null;
