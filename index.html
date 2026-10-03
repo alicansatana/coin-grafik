@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610021859"></script>
+<script src="hesap.js?v=202610031847"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -372,6 +372,32 @@ details.kavram p{margin:6px 0}
     <div id="gr-macd" class="gr-alt-grafik"></div>
     <div class="gr-gosterge-baslik"><b>RSI (14)</b> <span class="dim">— 70 üstü aşırı alım (çok hızlı yükselmiş), 30 altı aşırı satım (çok hızlı düşmüş)</span></div>
     <div id="gr-rsi" class="gr-alt-grafik" style="height:110px"></div>
+    <div id="gr-macd-yorum" class="note" style="margin:0 0 10px"></div>
+    <details class="note" style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:600">MACD ve RSI nasıl okunur? (açmak için tıkla)</summary>
+      <div style="margin-top:8px;line-height:1.55">
+      <p style="margin:0 0 8px"><b>Önce "ortalama" ne demek?</b> Grafikteki her mumun bir kapanış fiyatı var. "Son 12 mumun ortalaması", son 12 kapanışın ortalamasıdır.
+        MACD'de kullanılan ortalama <b>üssel</b> ortalamadır (EMA): yeni mumlara daha çok, eski mumlara daha az ağırlık verir, böylece fiyat dönünce daha çabuk tepki verir.
+        Mum sayısı açık olan grafiğe göre değişir: <b>1 dk</b> grafikte 12 mum = 12 dakika, <b>5 dk</b>'da 1 saat, <b>1 saat</b>'te yarım gün, <b>4 saat</b>'te 2 gün.</p>
+      <p style="margin:0 0 8px"><b class="" style="color:#4fc3f7">Mavi çizgi — MACD</b> = (son 12 mumun ortalaması) − (son 26 mumun ortalaması).<br>
+        Kısa ortalama yakın geçmişi, uzun ortalama biraz daha eski geçmişi temsil eder. Fiyat son zamanlarda yükseliyorsa yakın geçmiş daha pahalıdır, kısa ortalama uzunun üstüne çıkar ve <b>mavi artıya geçer</b>.
+        Düşüyorsa tersi olur ve mavi eksiye iner.<br>
+        <span class="dim">Örnek: coin 10$'dan 11$'a çıktı. Son 12 mumun ortalaması ≈ 10.6$, son 26 mumunki ≈ 10.3$ → MACD = +0.3 (mavi sıfırın üstünde, eğilim yukarı).</span><br>
+        Mavinin <b>sıfırdan ne kadar uzak</b> olduğu eğilimin gücünü gösterir. Sayı fiyat cinsindendir; o yüzden 0.03$'lık bir coinde değer çok küçük görünür, normaldir.</p>
+      <p style="margin:0 0 8px"><b style="color:#ffb74d">Turuncu çizgi — sinyal</b> = mavi çizginin son 9 mumluk ortalaması.<br>
+        Yani mavinin "yavaş", gecikmeli kopyasıdır. Amaç maviyi kendi yakın geçmişiyle karşılaştırmak: mavi turuncunun <b>üstündeyse</b> yükseliş hızlanıyor (ya da düşüş yavaşlıyor),
+        <b>altındaysa</b> yükseliş yavaşlıyor (ya da düşüş hızlanıyor).<br>
+        <b>Kesişim:</b> mavi turuncuyu aşağıdan yukarı keserse klasik "al" sinyali sayılır, yukarıdan aşağı keserse "sat".</p>
+      <p style="margin:0 0 8px"><b>Çubuklar — histogram</b> = mavi − turuncu, yani iki çizgi arasındaki mesafe.<br>
+        <span class="up">Koyu yeşil</span>: mavi turuncunun üstünde ve aralık açılıyor, yukarı güç artıyor. <span class="up" style="opacity:.6">Açık yeşil</span>: hâlâ üstte ama aralık kapanıyor, yükseliş yavaşlıyor.<br>
+        <span class="down">Koyu kırmızı</span>: aşağı güç artıyor. <span class="down" style="opacity:.6">Açık kırmızı</span>: düşüş yavaşlıyor.<br>
+        Çubuklar sıfıra doğru küçülüyorsa kesişim yaklaşıyor demektir, ama bu dönüşün <i>kesin geleceği</i> anlamına gelmez.</p>
+      <p style="margin:0 0 8px"><b style="color:#ce93d8">RSI (14)</b> = son 14 mumdaki yükselişlerin, toplam (yükseliş + düşüş) hareketin yüzde kaçı olduğu. 0 ile 100 arasındadır.
+        <b>70 üstü</b>: çok hızlı ve kesintisiz yükselmiş ("aşırı alım"). <b>30 altı</b>: çok hızlı düşmüş ("aşırı satım"). 50 civarı: dengeli.
+        Aşırı alım "hemen düşecek" demek değildir. Güçlü pompalarda RSI günlerce 80–95'te kalabilir (MOVR'da 95'i gördük).</p>
+      <p style="margin:0" class="warn"><b>Bilinmesi gereken iki şey:</b> (1) İkisi de geçmiş fiyattan hesaplanır, yani fiyatın <b>arkasından</b> gelir. Dönüşü, fiyat döndükten sonra gösterir.
+        (2) Ölçümümüzde (120 coin, 2 yıl) "MACD kesişti → gir" tek başına rastgele girişten farksız çıktı. İşe yaradığı yer başka koşullarla birlikte kullanıldığında:
+        LİDER'deki "MACD histogramı güçlü" şartı, Dip/Tepe'deki "dirençte RSI 65'in altına döndü".</p>
+      </div></details>
     <div class="gr-alt">
       <div style="overflow-x:auto"><h2 style="margin:4px 0 6px">Destek / direnç seviyeleri (fiyata en yakın)</h2><table id="gr-sr"></table></div>
       <div class="note" style="margin-top:0"><b>Seviyeler nasıl okunur?</b> Her zaman dilimi kendi dönüş noktalarından seviye üretir: <b>1–5 dk</b>'da çok sayıda, zayıf;
@@ -1982,12 +2008,27 @@ function grAltVeri() {
   const [m, sg, R] = grAltHesap(), P = grK.map((_, i) => grAltNokta(i, m, sg, R));
   const p = grK[grK.length - 1].c, hs = p < 0.01 ? 8 : p < 1 ? 6 : p < 100 ? 5 : 3, pf = { priceFormat: { type: "price", precision: hs, minMove: Math.pow(10, -hs) } };
   [grMacdH, grMacdL, grMacdS].forEach(s => s.applyOptions(pf));
+  grAltYorum(m, sg, R);
   grMacdH.setData(P.map(x => x.h)); grMacdL.setData(P.map(x => x.l)); grMacdS.setData(P.map(x => x.s)); grRsiL.setData(P.map(x => x.r));
   const r = grGrafik.timeScale().getVisibleLogicalRange(); if (r) { grMacdG.timeScale().setVisibleLogicalRange(r); grRsiG.timeScale().setVisibleLogicalRange(r); }
+}
+function grAltYorum(m, sg, R) {
+  const n = grK.length, i = n - 1; if (n < 40) return;
+  const h = m[i] - sg[i], ho = m[i - 1] - sg[i - 1], tf = GR_AD[grTf];
+  let kes = ""; for (let q = 1; q <= 3; q++) { const a = m[i - q + 1] - sg[i - q + 1], b = m[i - q] - sg[i - q]; if ((a > 0) !== (b > 0)) { kes = `${q === 1 ? "Son mumda" : q + " mum önce"} mavi turuncuyu <b>${a > 0 ? '<span class="up">yukarı</span>' : '<span class="down">aşağı</span>'}</b> kesti. `; break; } }
+  const r = R[i];
+  $("gr-macd-yorum").innerHTML = `<b>Şu an (${tf} grafik):</b> ` +
+    (m[i] >= 0 ? `Mavi sıfırın <span class="up">üstünde</span> → son 12 mumun ortalaması son 26 mumunkinden yüksek, bu zaman diliminde eğilim <span class="up">yukarı</span>. `
+               : `Mavi sıfırın <span class="down">altında</span> → son 12 mumun ortalaması son 26 mumunkinden düşük, bu zaman diliminde eğilim <span class="down">aşağı</span>. `) +
+    (h >= 0 ? `Mavi turuncunun <span class="up">üstünde</span> ` : `Mavi turuncunun <span class="down">altında</span> `) +
+    (Math.abs(h) >= Math.abs(ho) ? `ve aralık açılıyor → ${h >= 0 ? "yukarı" : "aşağı"} güç <b>artıyor</b>. ` : `ama aralık kapanıyor → ${h >= 0 ? "yükseliş" : "düşüş"} <b>yavaşlıyor</b>. `) + kes +
+    `RSI <b>${r.toFixed(0)}</b>: ${r >= 70 ? '<span class="down">aşırı alım</span> (çok hızlı yükselmiş)' : r <= 30 ? '<span class="up">aşırı satım</span> (çok hızlı düşmüş)' : r >= 50 ? "dengeli, alıcılar biraz önde" : "dengeli, satıcılar biraz önde"}. ` +
+    `<span class="dim">Bu, durumun özetidir; yön tahmini değildir.</span>`;
 }
 function grAltGuncelle() {
   if (!grMacdG || grK.length < 40) return;
   const [m, sg, R] = grAltHesap();
+  grAltYorum(m, sg, R);
   for (let i = grK.length - 3; i < grK.length; i++) { const x = grAltNokta(i, m, sg, R); grMacdH.update(x.h); grMacdL.update(x.l); grMacdS.update(x.s); grRsiL.update(x.r); }
 }
 async function grYukle() {
