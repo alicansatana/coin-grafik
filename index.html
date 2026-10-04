@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610041216"></script>
+<script src="hesap.js?v=202610041723"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -2094,7 +2094,8 @@ const isRoi = (p, x) => x.yon * (p / x.giris - 1) * IS_KAL * 100;
 const isPnl = (p, x) => x.yon * (p - x.giris) * x.q;
 const isSure = ms => { const d = Math.floor(ms / 60000); return d < 60 ? d + " dk" : d < 1440 ? Math.floor(d / 60) + " sa " + (d % 60) + " dk" : Math.floor(d / 1440) + " gün " + Math.floor(d % 1440 / 60) + " sa"; };
 const isYuzde = (v, ondalik = 0) => v === undefined || v === null || !Number.isFinite(v) ? '<span class="dim">–</span>' : `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : ""}${v.toFixed(ondalik)}%</span>`;
-const isSaat = t => t ? ` <span class="dim">${new Date(t).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</span>` : "";
+const isTarih = t => new Date(t).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", "");
+const isSaat = t => t ? ` <span class="dim">${isTarih(t)}</span>` : "";
 const isUc = x => `<span title="Pozisyon açıkken 1 dk mumların en düşük/en yüksek fiyatına (fitil dahil) göre görülen en kötü ve en iyi ROI. Saniyelik iğneler de sayılır: o fiyata TP/SL emri olsaydı dolardı.">${isYuzde(x.mae)}${isSaat(x.maeT)} / ${isYuzde(x.mfe)}${isSaat(x.mfeT)}</span>`;
 const isDolar = v => `<span class="${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}$</span>`;
 function isCuzdan() { return IS.bakiye0 + IS.kapali.reduce((a, x) => a + x.net, 0) - IS.acik.reduce((a, x) => a + x.komAc, 0); }
@@ -2216,18 +2217,18 @@ function isCiz() {
   }
   $("is-isabet").innerHTML = ih + `<tr><td colspan="5" class="dim">Yazı-tura %50'dir. Komisyon 20x'te her işlemde ≈ %2 ROI götürür; anlamlı bir sonuç için en az 30–50 işlem gerekir.</td></tr>`;
   const anlar = x => IS_SAAT.map(H => `<td>${isYuzde(x.anlar[H])}</td>`).join("");
-  $("is-acik").innerHTML = IS.acik.length ? `<tr><th>coin</th><th>yön</th><th>giriş</th><th>anlık</th><th>marjin</th><th>ROI</th><th>K/Z</th><th>süre</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th title="fitil dahil, saatleriyle">en kötü / en iyi ROI (saat)</th><th>TP / SL</th><th>likidasyon</th><th>not</th><th></th></tr>` +
+  $("is-acik").innerHTML = IS.acik.length ? `<tr><th>coin</th><th>yön</th><th>açılış</th><th>giriş</th><th>anlık</th><th>marjin</th><th>ROI</th><th>K/Z</th><th>süre</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th title="fitil dahil, tarih ve saatiyle">en kötü / en iyi ROI (tarih)</th><th>TP / SL</th><th>likidasyon</th><th>not</th><th></th></tr>` +
     IS.acik.map(x => { const p = isAnlik(x), lik = isLik(x); return `<tr><td><a href="#" class="is-git" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td>
-      <td><span class="dt-rozet ${x.yon > 0 ? "rsi" : "rsi s"}">${x.yon > 0 ? "LONG" : "SHORT"}</span></td><td>${grF(x.giris)}</td><td>${grF(p)}</td><td>${x.marjin}$</td>
+      <td><span class="dt-rozet ${x.yon > 0 ? "rsi" : "rsi s"}">${x.yon > 0 ? "LONG" : "SHORT"}</span></td><td class="dim">${isTarih(x.t0)}</td><td>${grF(x.giris)}</td><td>${grF(p)}</td><td>${x.marjin}$</td>
       <td><b>${isYuzde(isRoi(p, x), 1)}</b></td><td>${isDolar(isPnl(p, x))}</td><td>${isSure(simdi - x.t0)}</td>${anlar(x)}
       <td>${isUc(x)}</td><td>${x.tp ? "+" + x.tp + "%" : "–"} / ${x.sl ? "−" + x.sl + "%" : "–"}</td>
       <td class="dim">${lik ? grF(lik) + ` (${((lik / p - 1) * 100).toFixed(0)}%)` : "yok"}</td><td class="dim">${x.not || ""}</td><td><button class="is-kapat" data-id="${x.id}">Kapat</button></td></tr>`; }).join("")
     : `<tr><td class="dim">Açık pozisyon yok. Grafik sekmesindeki BUY / LONG ya da SELL / SHORT düğmesiyle aç.</td></tr>`;
-  $("is-kapali").innerHTML = K.length ? `<tr><th>coin</th><th>yön</th><th>giriş → çıkış</th><th>marjin</th><th>ROI</th><th>net</th><th>süre</th><th>kapanış</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th title="fitil dahil, saatleriyle">en kötü / en iyi ROI (saat)</th><th>not</th><th>tarih</th><th></th></tr>` +
+  $("is-kapali").innerHTML = K.length ? `<tr><th>coin</th><th>yön</th><th>açılış → kapanış</th><th>giriş → çıkış</th><th>marjin</th><th>ROI</th><th>net</th><th>süre</th><th>kapanış</th>${IS_SAAT.map(H => `<th>${H}s</th>`).join("")}<th title="fitil dahil, tarih ve saatiyle">en kötü / en iyi ROI (tarih)</th><th>not</th><th></th></tr>` +
     K.map(x => `<tr><td><a href="#" class="is-git" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td><td><span class="dt-rozet ${x.yon > 0 ? "rsi" : "rsi s"}">${x.yon > 0 ? "LONG" : "SHORT"}</span></td>
-      <td>${grF(x.giris)} → ${grF(x.cikis)}</td><td>${x.marjin}$</td><td><b>${isYuzde(x.roi, 1)}</b></td><td>${isDolar(x.net)}</td><td>${isSure(x.t1 - x.t0)}</td>
+      <td class="dim">${isTarih(x.t0)} → ${isTarih(x.t1)}</td><td>${grF(x.giris)} → ${grF(x.cikis)}</td><td>${x.marjin}$</td><td><b>${isYuzde(x.roi, 1)}</b></td><td>${isDolar(x.net)}</td><td>${isSure(x.t1 - x.t0)}</td>
       <td>${x.neden === "elle" ? "elle" : `<b class="${x.neden === "TP" ? "up" : "down"}">${x.neden}</b>`}</td>${anlar(x)}<td>${isUc(x)}</td>
-      <td class="dim">${x.not || ""}</td><td class="dim">${new Date(x.t0).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="dim">${x.not || ""}</td>
       <td><button class="is-sil" data-id="${x.id}" title="Bu kaydı sil">×</button></td></tr>`).join("")
     : `<tr><td class="dim">Henüz kapanan işlem yok.</td></tr>`;
   document.querySelectorAll(".is-kapat").forEach(b => b.onclick = () => { const x = IS.acik.find(y => y.id === +b.dataset.id); if (x) { isKapat(x, isAnlik(x), "elle"); isCiz(); isGrCiz(); } });
