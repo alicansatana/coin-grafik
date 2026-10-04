@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610041723"></script>
+<script src="hesap.js?v=202610041914"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -373,13 +373,14 @@ details.kavram p{margin:6px 0}
   <div class="card kart-karne gizli" style="grid-column:1/-1">
     <h2 style="margin-top:0">Tahmin karnesi — verdiğim adaylar tuttu mu?</h2>
     <div class="note" style="margin:0 0 8px">Dip / Tepe karar tablosunun son günlerde her 4 saatte bir vereceği adaylar, aynı kurallarla geçmiş veriden yeniden çıkarılır
-      (her taramadan en fazla <b>4 aday</b>, aynı coin 24 saat içinde tekrar sayılmaz). Giriş = adayın çıktığı 4 saatlik mumun kapanışı. Sonra 1 saatlik mumlarla:
+      (her taramadan en fazla <b>4 aday</b>, aynı coin 24 saat içinde tekrar sayılmaz). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
       hedef ROI'ye değdi mi, ne kadar sürede, önce zarar eşiğine mi düştü. Her açılışta Binance verisinden yeniden hesaplanır — telefon ve bilgisayar aynı raporu görür.</div>
     <div class="kontrol" style="padding:0 0 10px;flex-wrap:wrap;gap:8px">
       <label>Geriye <select id="kr-gun"><option value="14">14 gün</option><option value="30" selected>30 gün</option><option value="60">60 gün</option><option value="120">120 gün</option></select></label>
       <label>Hedef ROI % <input id="kr-hedef" type="number" value="70" min="5" style="width:64px"></label>
       <label>Zarar eşiği ROI % <input id="kr-zarar" type="number" value="100" min="5" style="width:64px"></label>
       <label>Kaldıraç <input id="kr-kal" type="number" value="20" min="1" max="125" style="width:54px">x</label>
+      <label title="Sinyal 4 saatlik kapanışta çıkar; geç girersen sonuç nasıl değişir?">Giriş <select id="kr-gecikme"><option value="0" selected>sinyal anında</option><option value="1">1 saat sonra</option><option value="2">2 saat sonra</option><option value="4">4 saat sonra</option><option value="8">8 saat sonra</option></select></label>
       <label>Taramada en fazla <input id="kr-adet" type="number" value="4" min="1" max="20" style="width:48px"> aday</label>
       <button id="kr-hesapla">Hesapla</button><span class="dim" id="kr-durum"></span>
     </div>
@@ -423,9 +424,9 @@ details.kavram p{margin:6px 0}
     <div class="kontrol" style="padding:0 0 8px"><button id="dt-tara">Yeniden tara</button><span class="dim" id="dt-durum"></span></div>
     <div id="dt-baslik" style="font-weight:600;margin:4px 0 6px">Bir satıra tıkla: coinin 4 saatlik grafiği ve bölgeleri burada açılır.</div>
     <div id="dt-chart"></div>
-    <div style="margin:14px 0 6px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><h2 style="margin:0 0 4px">Şu an girilebilecek pozisyonlar — her coin tek yön</h2>
+    <div style="margin:14px 0 6px;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><h2 style="margin:0 0 4px">Şu an girilebilecek pozisyonlar — sadece yeni çıkanlar, her coin tek yön</h2>
       <div class="note" style="margin:0 0 6px">Sadece geçmişte ölçülüp tutan kurallar. Bir coin hem LONG hem SHORT kuralına giriyorsa burada <b>yer almaz</b> (alttaki "pas geç" notuna düşer). Aşağıdaki listeler ayrıntı içindir; giriş kararı bu tablodan.</div>
-      <div style="overflow-x:auto"><table id="dt-karar"></table></div><div class="note" id="dt-karar-not" style="margin:6px 0 0"></div></div>
+      <div id="dt-karar-saat" class="dim" style="margin:0 0 6px;font-size:12px"></div><div style="overflow-x:auto"><table id="dt-karar"></table></div><details id="dt-karar-gec-kutu" style="margin-top:8px;display:none"><summary id="dt-karar-gec-baslik" style="cursor:pointer"></summary><div style="overflow-x:auto;margin-top:6px"><table id="dt-karar-gec"></table></div></details><div class="note" id="dt-karar-not" style="margin:6px 0 0"></div></div>
     <div style="margin:14px 0 6px"><h2 class="up" style="margin-bottom:4px">LİDER — güç devam ediyor (LONG · hedef +%5 · en geç 1 gün)</h2>
       <div class="note" style="margin:0 0 6px">Kural: fiyat 20 ortalamasının ≥1.5 ATR üstünde + MACD histogramı güçlü + <b>son 3 günde en çok birlikte hareket ettiği 5 coini ≥10 puan geçmiş</b>.
         <b>Ölçüm</b> (120 coin, 2 yıl, ilk yıl seçildi / ikinci yıl ölçüldü): 1 gün içinde +%5'e değme <b>%55–58</b> (rastgele %27);
@@ -1742,14 +1743,40 @@ function dtKararYaz() {
       neden: "ana dirençte RSI 65'in altına döndü", olcum: "7 gün sonra isabet %62, ort. +%0.74 (rastgele short −%0.50)", sira: 2000 });
   }
   satir.sort((a, b) => (a.yon === b.yon ? a.sira - b.sira : a.yon === "LONG" ? -1 : 1));
-  $("dt-karar").innerHTML = satir.length ? `<tr><th>karar</th><th>coin</th><th>fiyat</th><th>plan</th><th>süre</th><th>neden</th><th>geçmiş ölçüm</th></tr>` + satir.map(r =>
-    `<tr class="dt-satir${r.s === dtSecili ? " dt-secili" : ""}" data-s="${r.s}"><td><span class="dt-rozet ${r.yon === "LONG" ? "rsi" : "rsi s"}">${r.yon}</span></td><td><b>${r.s.replace("USDT", "")}</b></td>
-      <td>${dtF(r.fiyat)}</td><td>${r.plan}</td><td>${r.sure}</td><td class="dim">${r.neden}</td><td class="dim">${r.olcum}</td></tr>`).join("")
-    : `<tr><td class="dim">Şu an ölçülmüş kurallardan hiçbiri sağlanmıyor — beklemek de bir karar.</td></tr>`;
+  let sonT = null; try { sonT = dtYaslar(satir); } catch (e) { satir.forEach(r => { r.yas = 1; r.sinyalF = r.fiyat; }); }
+  const saat = ms => new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", "");
+  const taze = satir.filter(r => r.yas === 1), gec = satir.filter(r => r.yas > 1);
+  const bas = `<tr><th>karar</th><th>coin</th><th>sinyal</th><th>sinyal fiyatı</th><th>şimdi</th><th>sinyalden beri</th><th>plan</th><th>süre</th><th>neden</th><th>geçmiş ölçüm</th></tr>`;
+  const satirHtml = r => `<tr class="dt-satir${r.s === dtSecili ? " dt-secili" : ""}" data-s="${r.s}"><td><span class="dt-rozet ${r.yon === "LONG" ? "rsi" : "rsi s"}">${r.yon}</span></td><td><b>${r.s.replace("USDT", "")}</b></td>
+      <td>${r.sinyalT ? saat(r.sinyalT) : "–"}${r.yas > 1 ? ` <span class="dim">(${r.cokEski ? "2+ gün" : (r.yas - 1) * 4 + " saat"} önce)</span>` : ""}</td><td>${dtF(r.sinyalF)}</td>
+      <td class="dt-simdi" data-s="${r.s}" data-f="${r.sinyalF}" data-y="${r.yon === "LONG" ? 1 : -1}">…</td><td class="dt-fark" data-s="${r.s}">…</td>
+      <td>${r.plan}</td><td>${r.sure}</td><td class="dim">${r.neden}</td><td class="dim">${r.olcum}</td></tr>`;
+  if (sonT) {
+    const sonraki = sonT + 2 * KR_4S, dk = Math.max(0, Math.round((sonraki - Date.now()) / 60000));
+    $("dt-karar-saat").innerHTML = `Son 4 saatlik kapanış: <b>${saat(sonT + KR_4S)}</b> · sonraki: <b>${saat(sonraki)}</b> (${Math.floor(dk / 60)} sa ${dk % 60} dk sonra) — yeni adaylar sadece bu kapanışlarda çıkar; kapanıştan sonra ~10 dk içinde liste yenilenir.`;
+  }
+  $("dt-karar").innerHTML = taze.length ? bas + taze.map(satirHtml).join("")
+    : `<tr><td class="dim">Son 4 saatlik kapanışta yeni aday çıkmadı${gec.length ? " — daha önce çıkmış olanlar aşağıda (giriş için geç)" : " — beklemek de bir karar"}.</td></tr>`;
+  $("dt-karar-gec-baslik").innerHTML = `Daha önce çıkmış adaylar: <b>${gec.length}</b> <span class="dim">(sinyalin üzerinden en az 4 saat geçti — bilgi için; giriş zamanı kaçmış olabilir)</span>`;
+  $("dt-karar-gec").innerHTML = gec.length ? bas + gec.map(satirHtml).join("") : `<tr><td class="dim">Yok.</td></tr>`;
+  $("dt-karar-gec-kutu").style.display = gec.length ? "" : "none";
   $("dt-karar-not").innerHTML = (pas.length ? `<b>Pas geç (çok oynak, iki yöne de sert):</b> ${pas.join(", ")} — hem güç devam hem pompa/direnç sinyali var; geçmişte bu durumda 1 gün içinde hem +%5'e hem −%5'e değme %60–70, fiyat +%30'a kadar sıçrayabildi. `
-    : "") + `<b class="warn">LONG = kısa vade (en geç 1 gün, +%5 limit satış), ama yol çalkantılı:</b> bu coinler zaten çok yükselmiş olduğu için girişten sonra önce −%5 düşüp sonra hedefe gitmeleri olağan. 20x'te bu −%100 ROI demek; kural ancak stopsuz, cross'ta küçük marjinle ve 1 gün bekleyerek ölçüldüğü gibi çalışır. Erken stop / panik kapanış kenarı yok eder; rahat değilsen kaldıracı düşür (5x'te −%5 = −%25 ROI).  SHORT = uzun vade (~7 gün; kısa vadede bu sinyallerin avantajı ölçülmedi/yok). Aşağıdaki "ana destek" listesi ölçümde long avantajı göstermedi — oradan giriş yapma.`;
-  document.querySelectorAll("#dt-karar .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
+    : "") + `<b class="warn">LONG = kısa vade (en geç 1 gün, +%5 limit satış), ama yol çalkantılı:</b> bu coinler zaten çok yükselmiş olduğu için girişten sonra önce −%5 düşüp sonra hedefe gitmeleri olağan. 20x'te bu −%100 ROI demek; kural ancak stopsuz, cross'ta küçük marjinle ve 1 gün bekleyerek ölçüldüğü gibi çalışır. Erken stop / panik kapanış kenarı yok eder; rahat değilsen kaldıracı düşür (5x'te −%5 = −%25 ROI).  SHORT = uzun vade (~7 gün; kısa vadede bu sinyallerin avantajı ölçülmedi/yok). Aşağıdaki "ana destek" listesi ölçümde long avantajı göstermedi — oradan giriş yapma. Geç girişin etkisini <b>Tahmin karnesi</b>nde "Giriş" seçimiyle görebilirsin.`;
+  document.querySelectorAll("#dt-karar .dt-satir, #dt-karar-gec .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
+  dtSimdiYaz();
 }
+// karar tablosunda canlı fiyat ve sinyalden bu yana değişim
+async function dtSimdiYaz() {
+  const H = document.querySelectorAll(".dt-simdi"); if (!H.length) return;
+  let F = {}; try { const d = await (await fetch("https://fapi.binance.com/fapi/v1/ticker/price")).json(); if (Array.isArray(d)) d.forEach(x => F[x.symbol] = +x.price); } catch (e) { return; }
+  H.forEach(td => {
+    const p = F[td.dataset.s]; if (!p) return; const f = +td.dataset.f, y = +td.dataset.y, deg = (p / f - 1) * 100, lehte = y * deg;
+    td.textContent = dtF(p);
+    const fk = td.parentElement.querySelector(".dt-fark");
+    if (fk) fk.innerHTML = `<span class="${lehte >= 0 ? "up" : "down"}">${deg >= 0 ? "+" : ""}${deg.toFixed(1)}%</span>` + (lehte >= 2.5 ? ' <span class="dt-rozet kirik" title="Fiyat sinyalden beri senin yönünde epey gitti; hedefin büyük kısmı kaçmış olabilir">kaçtı</span>' : "");
+  });
+}
+setInterval(() => { if (sekme === "diptepe") dtSimdiYaz(); }, 30000);
 const DT_SIRA = { rsi: 0, macd: 1, bolge: 2, yakin: 3, kirik: 4 };
 const DT_AD = { dip: { rsi: "RSI döndü ↑", macd: "MACD döndü ↑", bolge: "destekte", yakin: "yaklaşıyor", kirik: "KIRILDI" },
   tepe: { rsi: "RSI döndü ↓", macd: "MACD döndü ↓", bolge: "dirençte", yakin: "yaklaşıyor", kirik: "KIRILDI ↑" } };
@@ -2259,8 +2286,8 @@ isGeriye().then(() => { if (sekme === "islem") isCiz(); isGrCiz(); });
 // ================== TAHMİN KARNESİ: karar tablosunun geçmişte vereceği adaylar tuttu mu? ==================
 // Her 4 saatlik kapanışta dtKararYaz ile aynı kurallar (LİDER LONG; pompa+ana direnç / dirençte RSI dönüşü SHORT; ikisi birden = pas) yeniden çalıştırılır.
 const KR_4S = 14400000, KR_1S = 3600000;
-let krSonuc = [], krCalisiyor = false, krKl = {};
-function krAyar() { return { gun: +$("kr-gun").value, hedef: +$("kr-hedef").value || 70, zarar: +$("kr-zarar").value || 100, kal: +$("kr-kal").value || 20, adet: Math.max(1, +$("kr-adet").value || 4) }; }
+let krSonuc = [], krCalisiyor = false, krKl = {}, krHaz = null;
+function krAyar() { return { gun: +$("kr-gun").value, hedef: +$("kr-hedef").value || 70, zarar: +$("kr-zarar").value || 100, kal: +$("kr-kal").value || 20, adet: Math.max(1, +$("kr-adet").value || 4), gecikme: +$("kr-gecikme").value || 0 }; }
 function krKisa(k, R, i) {
   // SHORT kuralları (ucuz ön eleme, sonra dtAnaliz): pompa >= %30 + ana dirençte  ya da  ana dirençte RSI 65 altına döndü
   let mn = Infinity; for (let q = i - 41; q <= i; q++) mn = Math.min(mn, k[q].l);
@@ -2271,29 +2298,53 @@ function krKisa(k, R, i) {
   if (rsiOn && a.durum.tepe && a.durum.tepe.sinif === "rsi") return { tur: "rsi", pompa: 0 };
   return null;
 }
+function krHazirla() {
+  if (krHaz && krHaz.z === dtZaman && krHaz.n === dtSonuc.length) return krHaz;
+  const coin = dtSonuc.map(x => x.s).filter(s => dtK[s] && dtK[s].length > 400), ix = {}, R = {};
+  for (const s of coin) { ix[s] = new Map(dtK[s].map((b, i) => [b.t, i])); R[s] = dtRsi(dtK[s].map(b => b.c)); }
+  krHaz = { z: dtZaman, n: dtSonuc.length, coin, ix, R, sonT: Math.max(...coin.map(s => dtK[s][dtK[s].length - 1].t)) };
+  return krHaz;
+}
+// T açılışlı 4 saatlik mum kapandığı anda karar tablosu ne derdi: { uzun, kisa } (güçlüden zayıfa)
+function krAnda(H, T) {
+  const K = {}, liste = [];
+  for (const s of H.coin) { const i = H.ix[s].get(T); if (i !== undefined && i >= 300) { K[s] = dtK[s].slice(i - 299, i + 1); liste.push({ s, i }); } }
+  let L = []; try { L = dtLiderHesapla(liste.map(x => ({ s: x.s })), K).filter(x => x.lider); } catch (e) {}
+  const lid = new Map(L.map(x => [x.s, x])), uzun = [], kisa = [];
+  for (const { s, i } of liste) {
+    const ks = krKisa(dtK[s], H.R[s], i), li = lid.get(s);
+    if (li && ks) continue;                                   // iki yöne de sinyal: pas geç
+    const fiyat = dtK[s][i].c;
+    if (li) uzun.push({ s, yon: 1, kural: "LİDER (güç devam)", fiyat, sira: li.akr, not: `3 günde +%${li.r3d.toFixed(0)}` });
+    else if (ks) kisa.push({ s, yon: -1, kural: ks.tur === "pompa" ? "pompa + ana direnç" : "ana dirençte RSI döndü", fiyat, sira: ks.tur === "pompa" ? -ks.pompa : 1000,
+      not: ks.tur === "pompa" ? `7 günde dibinden +%${ks.pompa.toFixed(0)}` : "" });
+  }
+  uzun.sort((x, y) => x.sira - y.sira); kisa.sort((x, y) => x.sira - y.sira);
+  return { uzun, kisa };
+}
+// karar tablosundaki her aday kaç 4 saatlik kapanıştır listede (1 = son kapanışta yeni çıktı), sinyal saati ve fiyatı
+function dtYaslar(satir) {
+  const H = krHazirla(), acik = new Map(satir.map(r => [r.s, { yon: r.yon === "LONG" ? 1 : -1, L: 0, bitti: false }]));
+  for (let n = 0; n < 13; n++) {
+    const { uzun, kisa } = krAnda(H, H.sonT - n * KR_4S), M = new Map(uzun.concat(kisa).map(x => [x.s, x.yon]));
+    let devam = false;
+    for (const [s, o] of acik) { if (o.bitti) continue; if (M.get(s) === o.yon) { o.L++; devam = true; } else o.bitti = true; }
+    if (!devam) break;
+  }
+  for (const r of satir) {
+    const o = acik.get(r.s), L = Math.max(1, o.L), T = H.sonT - (L - 1) * KR_4S, i = H.ix[r.s] ? H.ix[r.s].get(T) : undefined;
+    r.yas = L; r.cokEski = o.L >= 13; r.sinyalT = T + KR_4S; r.sinyalF = i !== undefined ? dtK[r.s][i].c : r.fiyat;
+  }
+  return H.sonT;
+}
 async function krAdaylar(A) {
   while (dtTaraniyor) await new Promise(r => setTimeout(r, 500));
   if (!dtSonuc.length || Date.now() - dtZaman > 1800000) await dtTara();
-  const coin = dtSonuc.map(x => x.s).filter(s => dtK[s] && dtK[s].length > 400);
-  const ix = {}, R = {};
-  for (const s of coin) { ix[s] = new Map(dtK[s].map((b, i) => [b.t, i])); R[s] = dtRsi(dtK[s].map(b => b.c)); }
-  const sonT = Math.max(...coin.map(s => dtK[s][dtK[s].length - 1].t)), basT = sonT - A.gun * 86400000;
-  const adim = []; for (let T = basT; T <= sonT; T += KR_4S) adim.push(T);
+  const H = krHazirla(), basT = H.sonT - A.gun * 86400000;
+  const adim = []; for (let T = basT; T <= H.sonT; T += KR_4S) adim.push(T);
   const son = new Map(), out = [];
   for (let a = 0; a < adim.length; a++) {
-    const T = adim[a], K = {}, liste = [];
-    for (const s of coin) { const i = ix[s].get(T); if (i !== undefined && i >= 300) { K[s] = dtK[s].slice(i - 299, i + 1); liste.push({ s, i }); } }
-    let L = []; try { L = dtLiderHesapla(liste.map(x => ({ s: x.s })), K).filter(x => x.lider); } catch (e) {}
-    const lid = new Map(L.map(x => [x.s, x])), uzun = [], kisa = [];
-    for (const { s, i } of liste) {
-      const ks = krKisa(dtK[s], R[s], i), li = lid.get(s);
-      if (li && ks) continue;                                   // iki yöne de sinyal: pas geç
-      const fiyat = dtK[s][i].c;
-      if (li) uzun.push({ s, yon: 1, kural: "LİDER (güç devam)", fiyat, sira: li.akr, not: `3 günde +%${li.r3d.toFixed(0)}` });
-      else if (ks) kisa.push({ s, yon: -1, kural: ks.tur === "pompa" ? "pompa + ana direnç" : "ana dirençte RSI döndü", fiyat, sira: ks.tur === "pompa" ? -ks.pompa : 1000,
-        not: ks.tur === "pompa" ? `7 günde dibinden +%${ks.pompa.toFixed(0)}` : "" });
-    }
-    uzun.sort((x, y) => x.sira - y.sira); kisa.sort((x, y) => x.sira - y.sira);
+    const T = adim[a], { uzun, kisa } = krAnda(H, T);
     const yari = Math.ceil(A.adet / 2), sec = uzun.slice(0, yari).concat(kisa.slice(0, A.adet - Math.min(yari, uzun.length)));
     for (const x of sec.slice(0, A.adet)) {
       const anahtar = x.s + "|" + x.yon, once = son.get(anahtar); son.set(anahtar, a);
@@ -2307,11 +2358,15 @@ async function krAdaylar(A) {
 async function krMumlar(x) {
   const anahtar = x.s + "|" + x.t, c = krKl[anahtar];
   if (c && (c.tam || Date.now() - c.z < 300000)) return c.k;
-  const d = await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${x.s}&interval=1h&startTime=${x.t}&limit=169`)).json();
+  const d = await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${x.s}&interval=1h&startTime=${x.t}&limit=177`)).json();
   const k = Array.isArray(d) ? d.filter(b => b[6] < Date.now()).map(b => ({ t: b[0], h: +b[2], l: +b[3], c: +b[4] })) : [];
-  krKl[anahtar] = { k, z: Date.now(), tam: k.length >= 168 }; return k;
+  krKl[anahtar] = { k, z: Date.now(), tam: k.length >= 177 }; return k;
 }
 function krDegerlendir(x, k, A) {
+  // geç giriş: sinyalden g saat sonra, o saatin kapanış fiyatından
+  const g = A.gecikme || 0;
+  if (g) { if (k.length < g) { x = { ...x, t: x.t + g * KR_1S }; k = []; } else { x = { ...x, fiyat: k[g - 1].c, t: x.t + g * KR_1S }; k = k.slice(g); } }
+  k = k.slice(0, 168);
   const roi = p => x.yon * (p / x.fiyat - 1) * A.kal * 100, o = { ...x, n: k.length, mfe: 0, mae: 0, hedefT: null, zararT: null, tersT: null };
   for (let j = 0; j < k.length; j++) {
     const b = k[j], iyi = roi(x.yon > 0 ? b.h : b.l), kotu = roi(x.yon > 0 ? b.l : b.h), saat = j + 1;
@@ -2375,7 +2430,7 @@ function krCiz(A = krAyar()) {
   document.querySelectorAll("#kr-tablo .dt-satir").forEach(r => r.onclick = () => isGrafigeGit(r.dataset.s));
 }
 $("kr-hesapla").onclick = () => krHesapla();
-["kr-hedef", "kr-zarar", "kr-kal"].forEach(id => $(id).addEventListener("change", () => {
+["kr-hedef", "kr-zarar", "kr-kal", "kr-gecikme"].forEach(id => $(id).addEventListener("change", () => {
   // eşik değişince sadece yeniden değerlendir (mumlar bellekte)
   if (!krSonuc.length || krCalisiyor) return; const A = krAyar();
   krSonuc = krSonuc.map(x => krDegerlendir(x, (krKl[x.s + "|" + x.t] || { k: [] }).k, A)); krCiz(A);
