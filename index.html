@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610032208"></script>
+<script src="hesap.js?v=202610041159"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -1769,7 +1769,7 @@ function dtKararYaz() {
     if (li && kisa) { pas.push(x.s.replace("USDT", "")); continue; }
     if (li) satir.push({ s: x.s, yon: "LONG", fiyat: x.fiyat, plan: `limit satış ${dtF(x.fiyat * 1.05)} (+%5)`, sure: "en geç 1 gün",
       neden: `güç devam: 3 günde +%${li.r3d.toFixed(0)}, en yakın 5 akrabasını ${(-li.akr).toFixed(0)} puan geçti, MACD güçlü`,
-      olcum: "1 günde +%5'e değme %55–58 (rastgele %27); ort. +%0.1…+%0.8", sira: li.akr });
+      olcum: "1 günde +%5'e değme %55–58 (rastgele %27); ort. +%0.1…+%0.8. <b class=\"warn\">Arada tipik −%5 (20x'te −%100 ROI), en kötü %10'da −%13</b>", sira: li.akr });
     else if (kisa === "pompa") satir.push({ s: x.s, yon: "SHORT", fiyat: x.fiyat, plan: "küçük pozisyon, sabırlı", sure: "~7 gün",
       neden: `7 günde dibinden +%${d2.pompa.toFixed(0)} pompa ve ana dirençte`, olcum: "7 gün sonra isabet %66–67, ort. +%2…+%4; arada sert ters gidebilir", sira: 1000 - d2.pompa });
     else if (kisa === "rsi") satir.push({ s: x.s, yon: "SHORT", fiyat: x.fiyat, plan: "küçük pozisyon, sabırlı", sure: "~7 gün",
@@ -1781,7 +1781,7 @@ function dtKararYaz() {
       <td>${dtF(r.fiyat)}</td><td>${r.plan}</td><td>${r.sure}</td><td class="dim">${r.neden}</td><td class="dim">${r.olcum}</td></tr>`).join("")
     : `<tr><td class="dim">Şu an ölçülmüş kurallardan hiçbiri sağlanmıyor — beklemek de bir karar.</td></tr>`;
   $("dt-karar-not").innerHTML = (pas.length ? `<b>Pas geç (çok oynak, iki yöne de sert):</b> ${pas.join(", ")} — hem güç devam hem pompa/direnç sinyali var; geçmişte bu durumda 1 gün içinde hem +%5'e hem −%5'e değme %60–70, fiyat +%30'a kadar sıçrayabildi. `
-    : "") + `LONG = kısa vade (en geç 1 gün, +%5 limit satış). SHORT = uzun vade (~7 gün; kısa vadede bu sinyallerin avantajı ölçülmedi/yok). Aşağıdaki "ana destek" listesi ölçümde long avantajı göstermedi — oradan giriş yapma.`;
+    : "") + `<b class="warn">LONG = kısa vade (en geç 1 gün, +%5 limit satış), ama yol çalkantılı:</b> bu coinler zaten çok yükselmiş olduğu için girişten sonra önce −%5 düşüp sonra hedefe gitmeleri olağan. 20x'te bu −%100 ROI demek; kural ancak stopsuz, cross'ta küçük marjinle ve 1 gün bekleyerek ölçüldüğü gibi çalışır. Erken stop / panik kapanış kenarı yok eder; rahat değilsen kaldıracı düşür (5x'te −%5 = −%25 ROI).  SHORT = uzun vade (~7 gün; kısa vadede bu sinyallerin avantajı ölçülmedi/yok). Aşağıdaki "ana destek" listesi ölçümde long avantajı göstermedi — oradan giriş yapma.`;
   document.querySelectorAll("#dt-karar .dt-satir").forEach(r => r.onclick = () => { dtGoster(r.dataset.s); sembolDegistir(r.dataset.s); });
 }
 const DT_SIRA = { rsi: 0, macd: 1, bolge: 2, yakin: 3, kirik: 4 };
