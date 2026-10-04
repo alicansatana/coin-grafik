@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610041921"></script>
+<script src="hesap.js?v=202610042229"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -2291,7 +2291,8 @@ isGeriye().then(() => { if (sekme === "islem") isCiz(); isGrCiz(); });
 // ================== TAHMİN KARNESİ: karar tablosunun geçmişte vereceği adaylar tuttu mu? ==================
 // Her 4 saatlik kapanışta dtKararYaz ile aynı kurallar (LİDER LONG; pompa+ana direnç / dirençte RSI dönüşü SHORT; ikisi birden = pas) yeniden çalıştırılır.
 const KR_4S = 14400000, KR_1S = 3600000;
-let krSonuc = [], krCalisiyor = false, krKl = {}, krHaz = null;
+let krSonuc = [], krCalisiyor = false, krKl = {}, krHaz = null, krAday = [], krZaman = 0, krGuncZaman = 0;
+const krKapanis = () => Math.floor(Date.now() / KR_4S) * KR_4S + 20000;   // son 4 saatlik kapanış + 20 sn
 function krAyar() { return { gun: +$("kr-gun").value, hedef: +$("kr-hedef").value || 70, zarar: +$("kr-zarar").value || 100, kal: +$("kr-kal").value || 20, adet: Math.max(1, +$("kr-adet").value || 4), gecikme: +$("kr-gecikme").value || 0 }; }
 function krKisa(k, R, i) {
   // SHORT kuralları (ucuz ön eleme, sonra dtAnaliz): pompa >= %30 + ana dirençte  ya da  ana dirençte RSI 65 altına döndü
@@ -2344,7 +2345,7 @@ function dtYaslar(satir) {
 }
 async function krAdaylar(A) {
   while (dtTaraniyor) await new Promise(r => setTimeout(r, 500));
-  if (!dtSonuc.length || Date.now() - dtZaman > 1800000) await dtTara();
+  if (!dtSonuc.length || Date.now() - dtZaman > 1800000 || (Date.now() >= krKapanis() && dtZaman < krKapanis())) await dtTara();
   const H = krHazirla(), basT = H.sonT - A.gun * 86400000;
   const adim = []; for (let T = basT; T <= H.sonT; T += KR_4S) adim.push(T);
   const son = new Map(), out = [];
@@ -2390,12 +2391,12 @@ async function krHesapla() {
   const A = krAyar();
   try {
     $("kr-durum").textContent = " coinler taranıyor…";
-    const ad = await krAdaylar(A); let bitti = 0; const sira = ad.slice(), sonuc = [];
+    const ad = await krAdaylar(A); krAday = ad; let bitti = 0; const sira = ad.slice(), sonuc = [];
     const isci = async () => { while (sira.length) { const x = sira.shift(); try { sonuc.push(krDegerlendir(x, await krMumlar(x), A)); } catch (e) {}
       bitti++; $("kr-durum").textContent = ` sonuçlar ölçülüyor… ${bitti}/${ad.length}`; } };
     await Promise.all(Array.from({ length: 4 }, isci));
-    krSonuc = sonuc.sort((a, b) => b.t - a.t);
-    $("kr-durum").textContent = ` ${ad.length} aday · ${new Date(Date.now() - A.gun * 86400000).toLocaleDateString("tr-TR")} – bugün · hesaplandı ${new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`;
+    krSonuc = sonuc.sort((a, b) => b.t - a.t); krZaman = krGuncZaman = Date.now();
+    krDurumYaz(A);
     krCiz(A);
   } catch (e) { $("kr-durum").textContent = " hesaplanamadı: " + e.message; }
   krCalisiyor = false; $("kr-hesapla").disabled = false;
@@ -2438,9 +2439,27 @@ $("kr-hesapla").onclick = () => krHesapla();
 ["kr-hedef", "kr-zarar", "kr-kal", "kr-gecikme"].forEach(id => $(id).addEventListener("change", () => {
   // eşik değişince sadece yeniden değerlendir (mumlar bellekte)
   if (!krSonuc.length || krCalisiyor) return; const A = krAyar();
-  krSonuc = krSonuc.map(x => krDegerlendir(x, (krKl[x.s + "|" + x.t] || { k: [] }).k, A)); krCiz(A);
+  krSonuc = krAday.map(x => krDegerlendir(x, (krKl[x.s + "|" + x.t] || { k: [] }).k, A)).sort((a, b) => b.t - a.t); krCiz(A);
 }));
-function krAc() { if (!krSonuc.length && !krCalisiyor) krHesapla(); }
+function krDurumYaz(A = krAyar()) {
+  const saat = ms => new Date(ms).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  $("kr-durum").textContent = ` ${krAday.length} aday · ${new Date(Date.now() - A.gun * 86400000).toLocaleDateString("tr-TR")} – bugün · aday listesi ${saat(krZaman)}, sonuçlar ${saat(krGuncZaman)} ·`
+    + ` yeni adaylar sonraki 4 saatlik kapanışta (${saat(krKapanis() - 20000 + KR_4S)}) eklenir, açık sonuçlar 10 dk'da bir güncellenir`;
+}
+// açık (7 günü dolmamış) adayların sonuçlarını tazele — aday listesi aynı kalır
+async function krGuncelle() {
+  if (krCalisiyor || !krAday.length) return; krCalisiyor = true; const A = krAyar();
+  try {
+    const sira = krAday.filter(x => !(krKl[x.s + "|" + x.t] || {}).tam);
+    const isci = async () => { while (sira.length) { const x = sira.shift(); try { await krMumlar(x); } catch (e) {} } };
+    await Promise.all(Array.from({ length: 3 }, isci));
+    krSonuc = krAday.map(x => krDegerlendir(x, (krKl[x.s + "|" + x.t] || { k: [] }).k, A)).sort((a, b) => b.t - a.t);
+    krGuncZaman = Date.now(); krCiz(A); krDurumYaz(A);
+  } catch (e) {}
+  krCalisiyor = false;
+}
+function krAc() { if (krCalisiyor) return; if (!krSonuc.length || krZaman < krKapanis() && Date.now() >= krKapanis()) krHesapla(); else if (Date.now() - krGuncZaman > 600000) krGuncelle(); }
+setInterval(() => { if (sekme === "karne") krAc(); }, 10000);
 // --- çizim (Tahmin sekmesindeki ile aynı mantık; zaman+fiyat olarak saklanır, zaman dilimi değişince yerinde kalır)
 const GR_RENK = ["#ffd54f", "#4fc3f7", "#81c784", "#ff8a80", "#e6e8ec"];
 let grCizimler = [], grCizModu = false, grCizTipi = "serbest", grCizRenk = GR_RENK[0], grCizAktif = null, grZ = [], grCizAnahtar = "", grKanvas = null, grCtx = null;
