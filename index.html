@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610051146"></script>
+<script src="hesap.js?v=202610051518"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -373,7 +373,7 @@ details.kavram p{margin:6px 0}
   <div class="card kart-karne gizli" style="grid-column:1/-1">
     <h2 style="margin-top:0">Tahmin karnesi — verdiğim adaylar tuttu mu?</h2>
     <div class="note" style="margin:0 0 8px">Dip / Tepe karar tablosunun son günlerde her 4 saatte bir vereceği adaylar, aynı kurallarla geçmiş veriden yeniden çıkarılır
-      (her taramadan seçilen sayıda aday — varsayılan <b>6</b>: 3 LONG + 3 SHORT, Dip / Tepe tablosundaki sırayla; bir coin, bir önceki taramada listede değilse yeni aday sayılır — Dip / Tepe'deki "taze" ile aynı). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
+      (varsayılan: her taramada Dip / Tepe taze tablosunda çıkan <b>bütün adaylar</b> — istersen her taramadan en güçlü N adayla sınırlayabilirsin; bir coin, bir önceki taramada listede değilse yeni aday sayılır — Dip / Tepe'deki "taze" ile aynı). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
       hedef ROI'ye değdi mi, ne kadar sürede, önce zarar eşiğine mi düştü. Her açılışta Binance verisinden yeniden hesaplanır — telefon ve bilgisayar aynı raporu görür.</div>
     <div class="kontrol" style="padding:0 0 10px;flex-wrap:wrap;gap:8px">
       <label>Geriye <select id="kr-gun"><option value="14">14 gün</option><option value="30" selected>30 gün</option><option value="60">60 gün</option><option value="120">120 gün</option></select></label>
@@ -381,7 +381,7 @@ details.kavram p{margin:6px 0}
       <label>Zarar eşiği ROI % <input id="kr-zarar" type="number" value="100" min="5" style="width:64px"></label>
       <label>Kaldıraç <input id="kr-kal" type="number" value="20" min="1" max="125" style="width:54px">x</label>
       <label title="Sinyal 4 saatlik kapanışta çıkar; geç girersen sonuç nasıl değişir?">Giriş <select id="kr-gecikme"><option value="0" selected>sinyal anında</option><option value="15">15 dk sonra</option><option value="30">30 dk sonra</option><option value="45">45 dk sonra</option><option value="60">1 saat sonra</option><option value="120">2 saat sonra</option><option value="240">4 saat sonra</option><option value="480">8 saat sonra</option></select></label>
-      <label>Taramada en fazla <input id="kr-adet" type="number" value="6" min="1" max="20" style="width:48px"> aday</label>
+      <label title="Boş = Dip / Tepe taze tablosundaki bütün adaylar">Taramada en fazla <input id="kr-adet" type="number" value="" placeholder="hepsi" min="1" max="40" style="width:56px"> aday</label>
       <label title="1 yıllık ölçüm: son 24 saatte +%20'den fazla yükselmiş coinlerin LİDER sinyali yılın iki yarısında da zayıf"><input type="checkbox" id="kr-filtre"> 24 saatte +%20'den fazla yükselmiş LONG'ları çıkar</label>
       <button id="kr-hesapla">Hesapla</button><span class="dim" id="kr-durum"></span>
     </div>
@@ -2296,7 +2296,7 @@ isGeriye().then(() => { if (sekme === "islem") isCiz(); isGrCiz(); });
 const KR_4S = 14400000, KR_1S = 3600000;
 let krSonuc = [], krCalisiyor = false, krKl = {}, krHaz = null, krAday = [], krZaman = 0, krGuncZaman = 0;
 const krKapanis = () => Math.floor(Date.now() / KR_4S) * KR_4S + 20000;   // son 4 saatlik kapanış + 20 sn
-function krAyar() { return { gun: +$("kr-gun").value, hedef: +$("kr-hedef").value || 70, zarar: +$("kr-zarar").value || 100, kal: +$("kr-kal").value || 20, adet: Math.max(1, +$("kr-adet").value || 6), gecikme: +$("kr-gecikme").value || 0, filtre: !!$("kr-filtre").checked }; }
+function krAyar() { return { gun: +$("kr-gun").value, hedef: +$("kr-hedef").value || 70, zarar: +$("kr-zarar").value || 100, kal: +$("kr-kal").value || 20, adet: Math.max(0, +$("kr-adet").value || 0), gecikme: +$("kr-gecikme").value || 0, filtre: !!$("kr-filtre").checked }; }
 function krKisa(k, R, i) {
   // SHORT kuralları (ucuz ön eleme, sonra dtAnaliz): pompa >= %30 + ana dirençte  ya da  ana dirençte RSI 65 altına döndü
   let mn = Infinity; for (let q = i - 41; q <= i; q++) mn = Math.min(mn, k[q].l);
@@ -2355,9 +2355,9 @@ async function krAdaylar(A) {
   let onceki = null; const out = [];
   for (let a = 0; a < adim.length; a++) {
     const T = adim[a], { uzun, kisa } = krAnda(H, T), simdi = new Set(uzun.concat(kisa).map(x => x.s + "|" + x.yon));
-    const yari = Math.ceil(A.adet / 2), sec = uzun.slice(0, yari).concat(kisa.slice(0, A.adet - Math.min(yari, uzun.length)));
+    const yari = Math.ceil(A.adet / 2), sec = !A.adet ? uzun.concat(kisa) : uzun.slice(0, yari).concat(kisa.slice(0, A.adet - Math.min(yari, uzun.length)));
     // Dip / Tepe'deki "taze" ile aynı: bir önceki taramada listede değilse yeni sinyal (ilk adımda önceki tarama bilinmediği için alınmaz)
-    if (onceki) for (const x of sec.slice(0, A.adet)) if (!onceki.has(x.s + "|" + x.yon)) out.push({ ...x, t: T + KR_4S });
+    if (onceki) for (const x of (A.adet ? sec.slice(0, A.adet) : sec)) if (!onceki.has(x.s + "|" + x.yon)) out.push({ ...x, t: T + KR_4S });
     onceki = simdi;
     if (a % 6 === 5) { $("kr-durum").textContent = ` adaylar çıkarılıyor… ${Math.round(a / adim.length * 100)}%`; await new Promise(r => setTimeout(r, 0)); }
   }
