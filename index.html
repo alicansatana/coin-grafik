@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610042251"></script>
+<script src="hesap.js?v=202610051146"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -373,7 +373,7 @@ details.kavram p{margin:6px 0}
   <div class="card kart-karne gizli" style="grid-column:1/-1">
     <h2 style="margin-top:0">Tahmin karnesi — verdiğim adaylar tuttu mu?</h2>
     <div class="note" style="margin:0 0 8px">Dip / Tepe karar tablosunun son günlerde her 4 saatte bir vereceği adaylar, aynı kurallarla geçmiş veriden yeniden çıkarılır
-      (her taramadan seçilen sayıda aday — varsayılan <b>6</b>: 3 LONG + 3 SHORT, Dip / Tepe tablosundaki sırayla; aynı coin 24 saat içinde tekrar sayılmaz). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
+      (her taramadan seçilen sayıda aday — varsayılan <b>6</b>: 3 LONG + 3 SHORT, Dip / Tepe tablosundaki sırayla; bir coin, bir önceki taramada listede değilse yeni aday sayılır — Dip / Tepe'deki "taze" ile aynı). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
       hedef ROI'ye değdi mi, ne kadar sürede, önce zarar eşiğine mi düştü. Her açılışta Binance verisinden yeniden hesaplanır — telefon ve bilgisayar aynı raporu görür.</div>
     <div class="kontrol" style="padding:0 0 10px;flex-wrap:wrap;gap:8px">
       <label>Geriye <select id="kr-gun"><option value="14">14 gün</option><option value="30" selected>30 gün</option><option value="60">60 gün</option><option value="120">120 gün</option></select></label>
@@ -2352,15 +2352,13 @@ async function krAdaylar(A) {
   if (!dtSonuc.length || Date.now() - dtZaman > 1800000 || (Date.now() >= krKapanis() && dtZaman < krKapanis())) await dtTara();
   const H = krHazirla(), basT = H.sonT - A.gun * 86400000;
   const adim = []; for (let T = basT; T <= H.sonT; T += KR_4S) adim.push(T);
-  const son = new Map(), out = [];
+  let onceki = null; const out = [];
   for (let a = 0; a < adim.length; a++) {
-    const T = adim[a], { uzun, kisa } = krAnda(H, T);
+    const T = adim[a], { uzun, kisa } = krAnda(H, T), simdi = new Set(uzun.concat(kisa).map(x => x.s + "|" + x.yon));
     const yari = Math.ceil(A.adet / 2), sec = uzun.slice(0, yari).concat(kisa.slice(0, A.adet - Math.min(yari, uzun.length)));
-    for (const x of sec.slice(0, A.adet)) {
-      const anahtar = x.s + "|" + x.yon, once = son.get(anahtar); son.set(anahtar, a);
-      if (once !== undefined && a - once <= 6) continue;          // 24 saat içinde zaten aday: aynı sinyal
-      out.push({ ...x, t: T + KR_4S });
-    }
+    // Dip / Tepe'deki "taze" ile aynı: bir önceki taramada listede değilse yeni sinyal (ilk adımda önceki tarama bilinmediği için alınmaz)
+    if (onceki) for (const x of sec.slice(0, A.adet)) if (!onceki.has(x.s + "|" + x.yon)) out.push({ ...x, t: T + KR_4S });
+    onceki = simdi;
     if (a % 6 === 5) { $("kr-durum").textContent = ` adaylar çıkarılıyor… ${Math.round(a / adim.length * 100)}%`; await new Promise(r => setTimeout(r, 0)); }
   }
   return out;
