@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610061911"></script>
+<script src="hesap.js?v=202610061917"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -191,7 +191,7 @@ details.kavram p{margin:6px 0}
   <span class="dim" id="zaman"></span><span class="dim" id="benzer"></span>
 </header>
 <div class="kontrol sekme" id="sekmeler">
-  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="grafik">Grafik</button><button data-sekme="islem">İşlemler</button><button data-sekme="karne">Tahmin karnesi</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="anlik">Anlık</button><button data-sekme="diptepe2">Dip / Tepe uzun dönem</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button><button data-sekme="formasyon">Formasyonlar</button>
+  <button data-sekme="tahmin" class="aktif">Tahmin</button><button data-sekme="grafik">Grafik</button><button data-sekme="islem">İşlemler</button><button data-sekme="karne">Tahmin karnesi</button><button data-sekme="diptepe">Dip / Tepe</button><button data-sekme="anlik">Anlık</button><button data-sekme="diptepe2">Dip / Tepe uzun dönem</button><button data-sekme="video">Video: SSL + Echo</button><button data-sekme="panel">Strateji paneli</button><button data-sekme="tarayici">Tarayıcı</button>
 </div>
 <div class="kontrol" id="tahmin-kontrol">
   <span class="dim">Geçmiş isabet çizgisi:</span>
@@ -292,21 +292,6 @@ details.kavram p{margin:6px 0}
   <span><i style="border-color:var(--sup);border-top-style:dashed"></i>destek</span>
 </div>
 <div class="grid">
-  <div class="card kart-formasyon gizli" style="grid-column:1/-1">
-    <h2>Formasyonlar — bu coinde son bulunanlar</h2>
-    <div class="note" style="margin:0 0 8px">15 klasik yöntem aynı anda taranıyor. Her satırın yanındaki <b>isabet</b>,
-      o formasyonun 40 coinde 200 günde ölçülmüş yön tutturma oranı (5 dakikalık mum, 1 saat tutma).
-      Rastgele giriş <b id="frm-rast">49</b>% tutturuyor — bu sayının altındaki her formasyon rastgeleden kötü demektir.</div>
-    <table id="frm-tablo"></table>
-    <div class="note" id="frm-not"></div>
-  </div>
-  <div class="card kart-formasyon gizli" style="grid-column:1/-1">
-    <h2>Ölçüm: hangi yöntem ne kadar tutuyor</h2>
-    <table id="frm-olcum"></table>
-    <div class="note">İki yarı, 200 günün ilk ve ikinci yarısı — bir yöntemin gerçek olması için ikisinde de rastgelenin
-      üstünde olması gerekir. "Net" sütunu komisyon ve kayma (<b id="frm-mal">0.18</b>%) düşüldükten sonraki ortalama;
-      hepsi negatif olduğu için hiçbiri tek başına işlem kuralı değildir.</div>
-  </div>
   <div class="card kart-grafik gizli" style="grid-column:1/-1">
     <div class="gr-ust">
       <b id="gr-baslik" style="font-size:16px">–</b>
@@ -583,6 +568,7 @@ const $ = id => document.getElementById(id);
 let sekme = "tahmin";
 try { sekme = localStorage.getItem("sekme") || "tahmin"; } catch (e) {}
 if (sekme === "ict") sekme = "diptepe";
+if (sekme === "formasyon") sekme = "tahmin";   // Formasyonlar sekmesi kaldırıldı
 if (sekme === "risk") sekme = "karne";   // Hedef / Risk sekmesi kaldırıldı   // ICT sekmesi kaldırıldı
 let V = null, ilk = true, sonBar = null, cizgiler = [], ws = null;
 // Keskin mod: morun ortası kaç benzer andan hesaplanıyor. 0 = hepsi (medyan), 1 = en yakın 50, 2 = en yakın 8.
@@ -1455,40 +1441,6 @@ $("p-sil").onclick = () => {
   panelFormDoldur(); pozCizgileri(); formDoldur(); pozBilgi(); panelCizgileri(); panelCanli();
 };
 
-// ---- Formasyonlar (6. sekme)
-function formasyonCiz() {
-  if (!V || !V.formasyon) return;
-  const F = V.formasyon;
-  $("frm-rast").textContent = F.rastgele.isabet2.toFixed(0);
-  $("frm-mal").textContent = F.maliyet;
-  const iyi = v => v === null || v === undefined ? "" : v > F.rastgele.isabet2 + 1 ? "up" : v < F.rastgele.isabet2 - 1 ? "down" : "dim";
-  tablo("frm-tablo", ["Saat", "Formasyon", "Ne dedi", "Fiyat", "1 saat sonra fiyat", "Sonuç", "Ölçülmüş isabet"],
-    F.sinyaller.slice().reverse().slice(0, 25).map(x => `<tr>
-      <td>${x.saat}</td><td>${x.ad}</td>
-      <td class="${x.yon > 0 ? "up" : "down"}">${x.yon > 0 ? "yukarı" : "aşağı"}</td>
-      <td>${f(x.fiyat)}</td>
-      <td class="${x.sonra === null ? "dim" : x.sonra > 0 ? "up" : "down"}">${x.sonra === null ? "–" : (x.sonra > 0 ? "+" : "") + x.sonra + "%"}</td>
-      <td>${x.sonra === null ? '<span class="durum bos">1 saat dolmadı</span>'
-        : (x.sonra > 0) === (x.yon > 0) ? '<span class="durum iyi">✓ tuttu</span>' : '<span class="durum kotu">✗ tutmadı</span>'}</td>
-      <td class="${iyi(x.isabet)}">${x.isabet === null ? "–" : "%" + x.isabet}</td></tr>`));
-  if (!F.sinyaller.length) $("frm-tablo").innerHTML += '<tr><td colspan="7" class="dim">Görünen aralıkta formasyon yok.</td></tr>';
-  const dolan = F.sinyaller.filter(x => x.sonra !== null);
-  const tutan = dolan.filter(x => (x.sonra > 0) === (x.yon > 0));
-  $("frm-not").innerHTML = dolan.length
-    ? `Görünen aralıkta 1 saati dolmuş ${dolan.length} sinyalin <b>${tutan.length}</b> tanesinde yön tuttu (%${(100 * tutan.length / dolan.length).toFixed(0)}).
-       "1 saat sonra fiyat" sütunu <b>gerçek fiyat değişimidir</b>: yukarı diyen bir sinyalde artı, aşağı diyen bir sinyalde eksi olması tuttuğu anlamına gelir.`
-    : "";
-  tablo("frm-olcum", ["Yöntem", "Sinyal sayısı", "İsabet 1. yarı", "İsabet 2. yarı", "Ortalama hareket", "Komisyon sonrası net"],
-    F.olcum.map(o => {
-      const net1 = o.ort1 === null ? null : o.ort1 - F.maliyet, net2 = o.ort2 === null ? null : o.ort2 - F.maliyet;
-      return `<tr><td>${o.ad}</td><td>${o.n}</td>
-        <td class="${iyi(o.isabet1)}">${o.isabet1 === null ? "–" : "%" + o.isabet1}</td>
-        <td class="${iyi(o.isabet2)}">${o.isabet2 === null ? "–" : "%" + o.isabet2}</td>
-        <td class="dim">${o.ort1 === null ? "–" : (o.ort1 > 0 ? "+" : "") + o.ort1.toFixed(3) + "% / " + (o.ort2 > 0 ? "+" : "") + o.ort2.toFixed(3) + "%"}</td>
-        <td class="down">${net1 === null ? "–" : net1.toFixed(3) + "% / " + net2.toFixed(3) + "%"}</td></tr>`;
-    }));
-}
-
 // ---- Tarayıcı (5. sekme): bütün coinler + o durumun geçmişteki sonucu
 let tarVeri = null, tarSira = "yukselen", tarZaman = 0;
 const TAR_SIRA = {
@@ -1556,23 +1508,21 @@ function gorunumAyarla() {
 
 function sekmeUygula() {
   const ict = sekme === "ict", video = sekme === "video", panel = sekme === "panel", tarayici = sekme === "tarayici";
-  const formasyon = sekme === "formasyon", diptepe = sekme === "diptepe", diptepe2 = sekme === "diptepe2", grafik = sekme === "grafik", islem = sekme === "islem", karne = sekme === "karne", anlik = sekme === "anlik";
-  const tahmin = !ict && !video && !panel && !tarayici && !formasyon && !diptepe && !diptepe2 && !grafik && !islem && !karne && !anlik;
+  const diptepe = sekme === "diptepe", diptepe2 = sekme === "diptepe2", grafik = sekme === "grafik", islem = sekme === "islem", karne = sekme === "karne", anlik = sekme === "anlik";
+  const tahmin = !ict && !video && !panel && !tarayici && !diptepe && !diptepe2 && !grafik && !islem && !karne && !anlik;
   document.querySelectorAll("button[data-sekme]").forEach(b => b.classList.toggle("aktif", b.dataset.sekme === sekme));
   document.querySelectorAll(".kart-ict").forEach(e => e.classList.toggle("gizli", !ict));
   document.querySelectorAll(".kart-video").forEach(e => e.classList.toggle("gizli", !video));
   document.querySelectorAll(".kart-panel").forEach(e => e.classList.toggle("gizli", !panel));
   document.querySelectorAll(".kart-tarayici").forEach(e => e.classList.toggle("gizli", !tarayici));
-  document.querySelectorAll(".kart-formasyon").forEach(e => e.classList.toggle("gizli", !formasyon));
   document.querySelectorAll(".kart-diptepe").forEach(e => e.classList.toggle("gizli", !diptepe));
   document.querySelectorAll(".kart-diptepe2").forEach(e => e.classList.toggle("gizli", !diptepe2));
   document.querySelectorAll(".kart-grafik").forEach(e => e.classList.toggle("gizli", !grafik));
   document.querySelectorAll(".kart-islem").forEach(e => e.classList.toggle("gizli", !islem));
   document.querySelectorAll(".kart-karne").forEach(e => e.classList.toggle("gizli", !karne));
   document.querySelectorAll(".kart-anlik").forEach(e => e.classList.toggle("gizli", !anlik));
-  if (formasyon) formasyonCiz();
-  $("alan").classList.toggle("gizli", tarayici || formasyon || diptepe || diptepe2 || grafik || islem || karne || anlik);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
-  $("poz-form").classList.toggle("gizli", panel || tarayici || formasyon || diptepe || diptepe2 || grafik || islem || karne || anlik);
+  $("alan").classList.toggle("gizli", tarayici || diptepe || diptepe2 || grafik || islem || karne || anlik);   // bu sekmelerde grafik yok, tablolar tüm ekranı alır
+  $("poz-form").classList.toggle("gizli", panel || tarayici || diptepe || diptepe2 || grafik || islem || karne || anlik);
   if (tarayici) tarayiciCek(true);
   if (diptepe) dtAc();
   if (diptepe2) dt2Ac();
@@ -2968,7 +2918,6 @@ function ciz() {
   if (sekme === "ict") mum.setMarkers(ictIsaretleri());
   if (sekme === "video") mum.setMarkers(videoIsaretleri());
   panelCiz();
-  if (sekme === "formasyon") formasyonCiz();
   srCiz();
   if (ilk) {
     poz = pozYukle(V.symbol) || V.pozisyon || null;
@@ -3096,7 +3045,7 @@ setInterval(() => {
   yedekCek();
 }, 5000);
 
-TABAN = TABAN_GOMULU; OLCUM = OLCUM_GOMULU;
+TABAN = TABAN_GOMULU;
 (async () => {
   await yukle();
   setInterval(yukle, 30000);
