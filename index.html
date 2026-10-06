@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610051923"></script>
+<script src="hesap.js?v=202610061858"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -383,6 +383,17 @@ details.kavram p{margin:6px 0}
     <div style="overflow-x:auto"><table id="an-tablo" class="is-tablo"></table></div>
     <h2 style="margin:14px 0 6px">Son saatin en çok hacim artışı olan coinleri <span class="dim" style="font-size:12px;font-weight:400">(hangi şart tuttu — bilgi için, öneri değil · coin adına tıkla: o coin seçilir)</span></h2>
     <div style="overflow-x:auto"><table id="an-izle" class="is-tablo"></table></div>
+    <h2 style="margin:16px 0 6px">Bu sayfa geçmişte ne kadar tuttu?</h2>
+    <div class="kontrol" style="padding:0 0 8px;flex-wrap:wrap;gap:8px">
+      <label>Geriye <select id="an-g-gun"><option value="7" selected>7 gün</option><option value="14">14 gün</option></select></label>
+      <button id="an-g-hesapla">Hesapla</button><span class="dim" id="an-g-durum"></span>
+    </div>
+    <div class="is-karolar" id="an-g-ozet"></div>
+    <div style="overflow-x:auto"><table id="an-g-tablo" class="is-tablo"></table></div>
+    <div class="note">Her geçmiş saat için bu sayfanın o saatte vereceği adaylar aynı şartlarla yeniden çıkarılır (coin başına 8 saatte 1). Giriş = sinyal mumunun kapanışı.
+      <b>Tuttu</b> = 8 saat içinde +%3.5'e (20x'te +%70 ROI) değdi, önce −%5'e (−%100 ROI) düşmeden. Saatlik mumlarla ölçülür; aynı saatte ikisi birden olduysa zarar sayılır.
+      Ortalama ROI: tutanlar +%70, önce düşenler −%100, ikisine de değmeyenler 8. saatteki fiyattan; komisyon (≈%2 ROI) dahil.
+      <span class="dim">Sınır: coin listesi bugünün en likit 150 coinidir.</span></div>
     <div class="note"><b>Nasıl kullanılır:</b> aday çıkınca hemen gir ve girişinden <b>+%3.5'e (20x'te +%70 ROI) limit satış</b> koy; en fazla <b>8 saat</b> bekle.
       Ölçümde işlemlerin ~%10'u hedeften önce −%5'e (−%100 ROI) düştü — 20x cross'ta marjini küçük tut. Liste her saat başından ~20 sn sonra bu sekme açıksa kendiliğinden yenilenir; fiyatlar 30 sn'de bir güncellenir.
       Bu sekmenin adayları Tahmin karnesine eklenmez.</div>
@@ -2547,8 +2558,64 @@ function anCiz() {
     : `<tr><td class="dim">–</td></tr>`;
   document.querySelectorAll(".an-coin").forEach(a => a.onclick = e => { e.preventDefault(); sembolDegistir(a.dataset.s); });
 }
+// --- Anlık: geçmiş tutma oranı (bu sayfanın kuralı, saatlik yeniden oynatma; karneye eklenmez)
+let anGecmis = [], anGecmisZaman = 0, anGecmisCalisiyor = false;
+async function anGecmisHesapla() {
+  if (anGecmisCalisiyor) return; anGecmisCalisiyor = true; $("an-g-hesapla").disabled = true;
+  try {
+    const gun = +$("an-g-gun").value || 7, lim = Math.min(1000, gun * 24 + 40), bas = Date.now() - gun * 86400000;
+    $("an-g-durum").textContent = " coin listesi alınıyor…";
+    const bilgi = await (await fetch("https://fapi.binance.com/fapi/v1/exchangeInfo")).json();
+    const coinler = new Set(bilgi.symbols.filter(x => x.contractType === "PERPETUAL" && x.quoteAsset === "USDT" && x.status === "TRADING" && x.underlyingType === "COIN").map(x => x.symbol));
+    const tk = await (await fetch("https://fapi.binance.com/fapi/v1/ticker/24hr")).json();
+    const liste = tk.filter(x => coinler.has(x.symbol) && !DT_DEGIL.has(x.symbol)).sort((a, b) => +b.quoteVolume - +a.quoteVolume).slice(0, AN_ADET).map(x => x.symbol);
+    const n0 = liste.length, out = []; let bitti = 0;
+    const isci = async () => { while (liste.length) { const s = liste.shift();
+      try {
+        const d = await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${s}&interval=1h&limit=${lim}`)).json();
+        const k = Array.isArray(d) ? d.filter(b => b[6] < Date.now()).map(b => ({ t: b[0], h: +b[2], l: +b[3], c: +b[4], qv: +b[7], tb: +b[10] })) : [];
+        let son = -1e18;
+        for (let i = 26; i < k.length; i++) {
+          const a = anDegerlendir(s, k.slice(Math.max(0, i - 29), i + 1));
+          if (!a || !a.aday || a.t < bas || a.t - son < 8 * AN_SAAT) continue;
+          son = a.t; const p = a.fiyat, ileri = k.slice(i + 1, i + 9); let sonuc = 0, sure = null, mfe = 0;
+          for (let q = 0; q < ileri.length; q++) { const b = ileri[q]; mfe = Math.max(mfe, (b.h / p - 1) * 2000);
+            if (b.l <= p * 0.95) { sonuc = -1; sure = q + 1; break; } if (b.h >= p * 1.035) { sonuc = 1; sure = q + 1; break; } }
+          const roi = sonuc === 1 ? 68 : sonuc === -1 ? -102 : ileri.length ? (ileri[ileri.length - 1].c / p - 1) * 2000 - 2 : 0;
+          out.push({ ...a, sonuc, sure, mfe, roi, bitti: sonuc !== 0 || ileri.length >= 8, n: ileri.length });
+        }
+      } catch (e) {}
+      bitti++; $("an-g-durum").textContent = ` hesaplanıyor… ${bitti}/${n0}`; } };
+    await Promise.all(Array.from({ length: 6 }, isci));
+    anGecmis = out.sort((a, b) => b.t - a.t); anGecmisZaman = Date.now();
+    $("an-g-durum").textContent = ` ${n0} coin · hesaplandı ${new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`;
+    anGecmisCiz();
+  } catch (e) { $("an-g-durum").textContent = " hesaplanamadı: " + e.message; }
+  anGecmisCalisiyor = false; $("an-g-hesapla").disabled = false;
+}
+function anGecmisCiz() {
+  const saat = ms => new Date(ms).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(",", "");
+  const B = anGecmis.filter(x => x.bitti), tut = B.filter(x => x.sonuc === 1), dus = B.filter(x => x.sonuc === -1), hic = B.filter(x => x.sonuc === 0);
+  const yuz = (a, b) => b ? `%${Math.round(a / b * 100)}` : "–", ort = B.length ? B.reduce((a, x) => a + x.roi, 0) / B.length : null;
+  const ss = tut.map(x => x.sure).sort((a, b) => a - b), med = ss.length ? ss[Math.floor(ss.length / 2)] : null;
+  const karo = (ad, d, alt) => `<div class="karo"><small>${ad}</small><b>${d}</b>${alt ? `<small>${alt}</small>` : ""}</div>`;
+  $("an-g-ozet").innerHTML = karo("Aday", anGecmis.length, `${B.length} bitti · ${anGecmis.length - B.length} devam ediyor`)
+    + karo("8 saatte +%70 ROI (tuttu)", yuz(tut.length, B.length), `${tut.length}/${B.length} · 1 yıllık ölçüm %36`)
+    + karo("Önce −%100'e düştü", yuz(dus.length, B.length), `${dus.length} aday`)
+    + karo("İkisine de değmedi", yuz(hic.length, B.length), "8. saatte kapanmış sayılır")
+    + karo("İşlem başına ort. ROI", ort === null ? "–" : isYuzde(ort), med === null ? "" : `tutanlarda medyan süre ${med} saat`);
+  $("an-g-tablo").innerHTML = anGecmis.length ? `<tr><th>sinyal</th><th>coin</th><th>giriş</th><th>1 saatte</th><th>hacim</th><th>sonuç (8 saat)</th><th>en iyi ROI</th><th>ROI</th></tr>` +
+    anGecmis.map(x => `<tr><td>${saat(x.t)}</td><td><a href="#" class="an-coin" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td><td>${dtF(x.fiyat)}</td>
+      <td class="up">+${(x.r1 * 100).toFixed(1)}%</td><td>${x.kat.toFixed(1)}x</td>
+      <td>${x.sonuc === 1 ? `<b class="up">✓ ${x.sure} saat içinde</b>` : x.sonuc === -1 ? `<b class="down">✗ önce −%100 (${x.sure}. saat)</b>` : x.bitti ? '<span class="dim">8 saat doldu</span>' : `<span class="dim">devam ediyor (${x.n}. saat)</span>`}</td>
+      <td>${isYuzde(x.mfe)}</td><td>${x.bitti ? isYuzde(x.roi) : "–"}</td></tr>`).join("")
+    : `<tr><td class="dim">Bu aralıkta aday çıkmamış.</td></tr>`;
+  document.querySelectorAll("#an-g-tablo .an-coin").forEach(a => a.onclick = e => { e.preventDefault(); sembolDegistir(a.dataset.s); });
+}
+$("an-g-hesapla").onclick = () => anGecmisHesapla();
 $("an-tara").onclick = () => anTara();
-function anAc() { const kap = Math.floor(Date.now() / AN_SAAT) * AN_SAAT + 20000; if (!anTaraniyor && (anZaman < kap || !anSonuc.length)) anTara(); else anCiz(); }
+function anAc() { const kap = Math.floor(Date.now() / AN_SAAT) * AN_SAAT + 20000; if (!anTaraniyor && (anZaman < kap || !anSonuc.length)) anTara(); else anCiz();
+  if (!anGecmisCalisiyor && Date.now() - anGecmisZaman > 30 * 60000) setTimeout(anGecmisHesapla, anTaraniyor ? 15000 : 0); else if (anGecmis.length) anGecmisCiz(); }
 setInterval(() => {
   if (sekme !== "anlik" || anTaraniyor) return;
   const kap = Math.floor(Date.now() / AN_SAAT) * AN_SAAT + 20000;      // her saat başından ~20 sn sonra yeni tarama
