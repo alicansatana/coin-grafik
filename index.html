@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610061858"></script>
+<script src="hesap.js?v=202610061911"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -312,6 +312,7 @@ details.kavram p{margin:6px 0}
       <b id="gr-baslik" style="font-size:16px">–</b>
       <span class="gr-grup" id="gr-tf"><button data-tf="1m">1 dk</button><button data-tf="3m">3 dk</button><button data-tf="5m">5 dk</button><button data-tf="15m">15 dk</button><button data-tf="1h">1 saat</button><button data-tf="4h">4 saat</button></span>
       <span class="gr-grup" id="gr-ac"><button data-ac="ema">EMA 20/50/200</button><button data-ac="hacim">Hacim</button><button data-ac="sr_bu">S/R bu grafik</button><button data-ac="sr_1h">S/R 1 saat</button><button data-ac="sr_4h">S/R 4 saat</button></span>
+      <span class="gr-grup" id="gr-ac2"><button data-ac="gun" title="Dün ve geçen haftanın en yüksek/düşük fiyatı, bugünün açılışı">Dün / hafta</button><button data-ac="son" title="Son 24 saatin tepe/dibi ve 1 saatlikte son dönüş noktaları (tek dokunuş yeter)">Son tepe / dip</button><button data-ac="fib" title="Son 10 günün en büyük hareketinin Fibonacci seviyeleri">Fibonacci</button><button data-ac="yuvarlak" title="Fiyatın yakınındaki yuvarlak (psikolojik) seviyeler">Yuvarlak sayılar</button><button data-ac="yil" title="Son 1 yılın en yüksek ve en düşük fiyatı">1 yıl tepe / dip</button></span>
     </div>
     <div class="is-bar">
       <b>Sanal işlem</b>
@@ -367,6 +368,9 @@ details.kavram p{margin:6px 0}
         <b>1 saat / 4 saat</b>'te az ama güçlü seviye çıkar (çok daha fazla işlem o noktada dönmüş). Grafikte <b>kalın çizgi = 4 saat</b>, orta = 1 saat, ince kesikli = açık olan grafik.
         "3x" = fiyat o bölgeden 3 ayrı kez dönmüş. <b>Önerim:</b> 4 saat / 1 saat seviyelerini harita gibi kullan, girişi 1–5 dk grafikte zamanla.
         Seviyeler <b>tam çizgi değil bölgedir</b>: ölçümlerimizde en güçlü 4 saatlik bölgeler bile sık sık iğneyle delindi (bölgenin %1 altına konan stop %70 patladı).
+        <b>Ek seviyeler</b> (alttaki düğmeler) her zaman vardır — fiyat yeni tepedeyken ve geçmiş direnç yokken de: <span style="color:#ffb74d">dün/geçen hafta yüksek-düşük, bugün açılış</span>,
+        <span style="color:#e6e8ec">son 24 saat tepe/dip ve son dönüş noktası</span>, <span style="color:#ce93d8">Fibonacci (geri çekilme 0.382/0.5/0.618, hedef 1.272/1.618)</span>, yuvarlak sayılar, <span style="color:#ff7043">1 yıl tepe/dip</span>.
+        Bunlar trader'ların baktığı görsel referanslardır; "burada döner" diye ölçülmüş kurallar değildir.
         Grafik fareyle / parmakla kaydırılır ve yakınlaştırılır; ✏️ ile çizim yaparken kaydırma kapanır. Çizimler zaman+fiyat olarak saklanır, zaman dilimi değişince aynı yerde kalır.</div>
     </div>
   </div>
@@ -1958,7 +1962,7 @@ setInterval(() => { if (sekme === "diptepe2" && Date.now() - dt2Zaman > 600000) 
 const GR_TZ = -new Date().getTimezoneOffset() * 60;
 const GR_MS = { "1m": 60e3, "3m": 180e3, "5m": 300e3, "15m": 900e3, "1h": 3600e3, "4h": 14400e3 };
 const GR_AD = { "1m": "1 dk", "3m": "3 dk", "5m": "5 dk", "15m": "15 dk", "1h": "1 saat", "4h": "4 saat" };
-let grTf = "5m", grAcik = { ema: true, hacim: true, sr_bu: true, sr_1h: true, sr_4h: true };
+let grTf = "5m", grAcik = { ema: true, hacim: true, sr_bu: true, sr_1h: true, sr_4h: true, gun: true, son: true, fib: false, yuvarlak: false, yil: true };
 try { const x = JSON.parse(localStorage.getItem("grAyar") || "{}"); if (GR_MS[x.tf]) grTf = x.tf; if (x.acik) Object.assign(grAcik, x.acik); } catch (e) {}
 let grGrafik = null, grMum, grHacim, grEma = {}, grK = [], grSembol = null, grUst = {}, grSR = {}, grCizgi = [], grYukleniyor = false;
 const grF = x => { const a = Math.abs(x); return x.toFixed(a >= 100 ? 2 : a >= 1 ? 4 : a >= 0.01 ? 5 : 7); };
@@ -2017,6 +2021,47 @@ function grSRHesapla() {
   grSR = { [grTf]: grSeviyeler(grK, grTf === "4h" || grTf === "1h" ? 6 : 5) };
   for (const tf of ["1h", "4h"]) if (tf !== grTf && grUst[tf]) grSR[tf] = grSeviyeler(grUst[tf], 6);
 }
+// --- ek seviyeler: her zaman var olan referanslar (dün/hafta, son tepe-dip, Fibonacci, yuvarlak sayılar, 1 yıl) — ölçülmüş kural değil, görsel referans
+const GR_EK = {
+  gun: { renk: "#ffb74d", st: () => LS.Dashed, w: 1 }, son: { renk: "#e6e8ec", st: () => LS.Dotted, w: 1 },
+  fib: { renk: "#ce93d8", st: () => LS.Dotted, w: 1 }, yuvarlak: { renk: "#6b7280", st: () => LS.SparseDotted, w: 1 }, yil: { renk: "#ff7043", st: () => LS.Solid, w: 2 } };
+function grEkSeviyeler(p) {
+  const out = [], ekle = (fiyat, ad, tur) => { if (fiyat > 0 && Number.isFinite(fiyat)) out.push({ fiyat, ad, tur }); };
+  const d = grUst["1d"] || [], w = grUst["1w"] || [], h1 = grUst["1h"] || [], h4 = grUst["4h"] || [];
+  if (grAcik.gun && d.length >= 2) {
+    const dun = d[d.length - 2]; ekle(dun.h, "dün yüksek", "gun"); ekle(dun.l, "dün düşük", "gun"); ekle(d[d.length - 1].o, "bugün açılış", "gun");
+    if (w.length >= 2) { ekle(w[w.length - 2].h, "geçen hafta yüksek", "gun"); ekle(w[w.length - 2].l, "geçen hafta düşük", "gun"); }
+  }
+  if (grAcik.son && h1.length > 30) {
+    const s24 = h1.slice(-24); ekle(Math.max(...s24.map(b => b.h)), "24 saat tepe", "son"); ekle(Math.min(...s24.map(b => b.l)), "24 saat dip", "son");
+    let ph = null, pl = null;                               // 1 saatlikte son onaylı tepe / dip (3 mum sağ-sol)
+    for (let j = h1.length - 4; j >= 3 && (ph === null || pl === null); j--) {
+      let mx = true, mn = true; for (let q = j - 3; q <= j + 3; q++) { if (h1[q].h > h1[j].h) mx = false; if (h1[q].l < h1[j].l) mn = false; }
+      if (mx && ph === null) ph = h1[j].h; if (mn && pl === null) pl = h1[j].l;
+    }
+    if (ph !== null) ekle(ph, "son tepe (1 saat)", "son"); if (pl !== null) ekle(pl, "son dip (1 saat)", "son");
+  }
+  if (grAcik.fib && h4.length > 60) {
+    const s = h4.slice(-60); let iH = 0, iL = 0; s.forEach((b, i) => { if (b.h > s[iH].h) iH = i; if (b.l < s[iL].l) iL = i; });
+    const H = s[iH].h, L = s[iL].l, a = H - L, yukari = iL < iH;   // son 10 günün en büyük hareketi
+    for (const r of [0.382, 0.5, 0.618]) ekle(yukari ? H - a * r : L + a * r, `Fib ${r} ${yukari ? "geri çekilme" : "tepki"}`, "fib");
+    for (const r of [1.272, 1.618]) ekle(yukari ? L + a * r : H - a * r, `Fib ${r} ${yukari ? "hedef" : "aşağı hedef"}`, "fib");
+  }
+  if (grAcik.yuvarlak && p > 0) {
+    const adim = Math.pow(10, Math.floor(Math.log10(p))) / 2, t = Math.floor(p / adim) * adim;
+    for (const v of [t - adim, t, t + adim, t + 2 * adim]) ekle(v, "yuvarlak sayı", "yuvarlak");
+  }
+  if (grAcik.yil && d.length > 30) {
+    const s = d.slice(-365); ekle(Math.max(...s.map(b => b.h)), `${s.length >= 360 ? "1 yıl" : s.length + " gün"} tepe`, "yil"); ekle(Math.min(...s.map(b => b.l)), `${s.length >= 360 ? "1 yıl" : s.length + " gün"} dip`, "yil");
+  }
+  // fiyattan çok uzakları at (%40); %0.15'ten yakın seviyeleri tek çizgide birleştir (adları yan yana)
+  const tek = [];
+  for (const x of out.filter(x => Math.abs(x.fiyat / p - 1) <= 0.4).sort((a, b) => a.fiyat - b.fiyat)) {
+    const y = tek.find(z => Math.abs(z.fiyat / x.fiyat - 1) < 0.0015);
+    if (y) { if (!y.ad.includes(x.ad)) y.ad += " · " + x.ad; } else tek.push({ ...x });
+  }
+  return tek;
+}
 function grSRCiz() {
   if (!grMum) return;
   grCizgi.forEach(x => grMum.removePriceLine(x)); grCizgi = [];
@@ -2033,11 +2078,16 @@ function grSRCiz() {
       satir.push({ z, destek, tf, uz: (z.fiyat / p - 1) * 100 });
     }
   }
+  for (const x of grEkSeviyeler(p)) {
+    const g = GR_EK[x.tur], destek = x.fiyat < p;
+    grCizgi.push(grMum.createPriceLine({ price: x.fiyat, color: g.renk, lineWidth: g.w, lineStyle: g.st(), axisLabelVisible: true, title: x.ad }));
+    satir.push({ z: { fiyat: x.fiyat, alt: x.fiyat, ust: x.fiyat, dok: "–" }, destek, ek: x, uz: (x.fiyat / p - 1) * 100 });
+  }
   satir.sort((a, b) => b.z.fiyat - a.z.fiyat);
   const guc = { "4h": "güçlü", "1h": "orta" };
-  $("gr-sr").innerHTML = satir.length ? `<tr><th>tür</th><th>seviye</th><th>bölge</th><th>zaman dilimi</th><th>dokunuş</th><th>uzaklık</th></tr>` + satir.map(s =>
-    `<tr><td class="${s.destek ? "up" : "down"}">${s.destek ? "destek" : "direnç"}</td><td><b>${grF(s.z.fiyat)}</b></td><td class="dim">${grF(s.z.alt)}–${grF(s.z.ust)}</td>`
-    + `<td>${GR_AD[s.tf]} <span class="dim">${guc[s.tf] || "zayıf"}</span></td><td>${s.z.dok}x</td><td class="${s.destek ? "up" : "down"}">${s.uz >= 0 ? "+" : ""}${s.uz.toFixed(2)}%</td></tr>`).join("")
+  $("gr-sr").innerHTML = satir.length ? `<tr><th>tür</th><th>seviye</th><th>bölge</th><th>kaynak</th><th>dokunuş</th><th>uzaklık</th></tr>` + satir.map(s =>
+    `<tr><td class="${s.destek ? "up" : "down"}">${s.destek ? "destek" : "direnç"}</td><td><b>${grF(s.z.fiyat)}</b></td><td class="dim">${s.ek ? "–" : grF(s.z.alt) + "–" + grF(s.z.ust)}</td>`
+    + `<td>${s.ek ? `<span style="color:${GR_EK[s.ek.tur].renk}">${s.ek.ad}</span>` : `${GR_AD[s.tf]} <span class="dim">${guc[s.tf] || "zayıf"}</span>`}</td><td>${s.ek ? "–" : s.z.dok + "x"}</td><td class="${s.destek ? "up" : "down"}">${s.uz >= 0 ? "+" : ""}${s.uz.toFixed(2)}%</td></tr>`).join("")
     : `<tr><td class="dim">Seviye bulunamadı (S/R düğmeleri kapalı olabilir).</td></tr>`;
 }
 function grVeriBas() {
@@ -2109,9 +2159,9 @@ async function grYukle() {
   if (!V || grYukleniyor) return;
   const sym = V.symbol; grYukleniyor = true; $("gr-baslik").textContent = `${sym} · ${GR_AD[grTf]} · yükleniyor…`;
   try {
-    const [k, k1, k4] = await Promise.all([grKlines(sym, grTf, 1000), grKlines(sym, "1h", 1000), grKlines(sym, "4h", 1000)]);
+    const [k, k1, k4, g1, h1] = await Promise.all([grKlines(sym, grTf, 1000), grKlines(sym, "1h", 1000), grKlines(sym, "4h", 1000), grKlines(sym, "1d", 400), grKlines(sym, "1w", 3)]);
     if (sym !== grSembol) { grSembol = sym; grCizYukle(); }
-    grK = k; grUst = { "1h": k1, "4h": k4, zaman: Date.now() };
+    grK = k; grUst = { "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() };
     grVeriBas(); grSRHesapla(); grSRCiz();
     grGrafik.timeScale().setVisibleLogicalRange({ from: k.length - 160, to: k.length + 8 });
   } catch (e) { $("gr-baslik").textContent = `${sym} · veri alınamadı: ${e.message}`; }
@@ -2132,8 +2182,8 @@ async function grCanli() {
     grAltGuncelle();
     if (yeni) { grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); }
     if (Date.now() - (grUst.zaman || 0) > 300000) {
-      const [k1, k4] = await Promise.all([grKlines(grSembol, "1h", 1000), grKlines(grSembol, "4h", 1000)]);
-      grUst = { "1h": k1, "4h": k4, zaman: Date.now() }; grSRHesapla(); grSRCiz();
+      const [k1, k4, g1, h1] = await Promise.all([grKlines(grSembol, "1h", 1000), grKlines(grSembol, "4h", 1000), grKlines(grSembol, "1d", 400), grKlines(grSembol, "1w", 3)]);
+      grUst = { "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() }; grSRHesapla(); grSRCiz();
     }
   } catch (e) {}
 }
@@ -2141,10 +2191,10 @@ setInterval(grCanli, 3000);
 setInterval(() => { if (sekme === "grafik") grBilgi(null); }, 1000);
 function grDugmeler() {
   document.querySelectorAll("#gr-tf [data-tf]").forEach(b => b.classList.toggle("aktif", b.dataset.tf === grTf));
-  document.querySelectorAll("#gr-ac [data-ac]").forEach(b => b.classList.toggle("aktif", !!grAcik[b.dataset.ac]));
+  document.querySelectorAll("#gr-ac [data-ac], #gr-ac2 [data-ac]").forEach(b => b.classList.toggle("aktif", !!grAcik[b.dataset.ac]));
 }
 document.querySelectorAll("#gr-tf [data-tf]").forEach(b => b.onclick = () => { grTf = b.dataset.tf; grSakla(); grDugmeler(); grYukle(); });
-document.querySelectorAll("#gr-ac [data-ac]").forEach(b => b.onclick = () => {
+document.querySelectorAll("#gr-ac [data-ac], #gr-ac2 [data-ac]").forEach(b => b.onclick = () => {
   grAcik[b.dataset.ac] = !grAcik[b.dataset.ac]; grSakla(); grDugmeler();
   if (grK.length) { if (b.dataset.ac === "ema" || b.dataset.ac === "hacim") grVeriBas(); grSRCiz(); }
 });
