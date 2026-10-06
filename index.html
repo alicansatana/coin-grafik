@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610061917"></script>
+<script src="hesap.js?v=202610061923"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -2398,11 +2398,11 @@ const krSure = s => { const m = Math.round(s * 60); return m < 60 ? `${m} dk` : 
 // ilk 24 saat için 15 dk'lık (süre ve geç giriş dakika hassasiyetinde), 7 güne kadar 1 saatlik mumlar
 async function krMumlar(x) {
   const anahtar = x.s + "|" + x.t, c = krKl[anahtar];
-  if (c && (c.tam || Date.now() - c.z < 300000)) return c.m;
+  if (c && (c.tam || Date.now() - c.z < 60000)) return c.m;
   const al = async (iv, lim) => { const d = await (await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${x.s}&interval=${iv}&startTime=${x.t}&limit=${lim}`)).json();
-    return Array.isArray(d) ? d.filter(b => b[6] < Date.now()).map(b => ({ t: b[0], h: +b[2], l: +b[3], c: +b[4] })) : []; };
+    return Array.isArray(d) ? d.map(b => ({ t: b[0], h: +b[2], l: +b[3], c: +b[4], kapali: b[6] < Date.now() })) : []; };
   const k15 = await al("15m", 130), k1 = await al("1h", 177), m = { k15, k1 };
-  krKl[anahtar] = { m, z: Date.now(), tam: k15.length >= 130 && k1.length >= 177 }; return m;
+  krKl[anahtar] = { m, z: Date.now(), tam: k15.length >= 130 && k1.length >= 177 && k15.every(b => b.kapali) && k1.every(b => b.kapali) }; return m;
 }
 const krMum = x => (krKl[x.s + "|" + x.t] || {}).m || KR_BOS;
 function krDegerlendir(x, m, A) {
@@ -2411,19 +2411,19 @@ function krDegerlendir(x, m, A) {
   let k15 = m.k15 || [], k1 = m.k1 || [];
   if (q) { if (k15.length < q) { x = { ...x, t: x.t + g * 60000 }; k15 = []; k1 = []; } else { x = { ...x, fiyat: k15[q - 1].c, t: x.t + g * 60000 }; k15 = k15.slice(q); } }
   const yol = k15.slice(0, 96).map(b => ({ ...b, bit: b.t + 900000 }));
-  if (yol.length === 96) for (const b of k1) if (b.t >= x.t + 86400000 && b.t + KR_1S <= x.t + 7 * 86400000) yol.push({ ...b, bit: b.t + KR_1S });
+  if (yol.length === 96) for (const b of k1) if (b.t >= x.t + 86400000 && b.t + KR_1S <= x.t + 7 * 86400000 + KR_1S) yol.push({ ...b, bit: b.t + KR_1S });
   const roi = p => x.yon * (p / x.fiyat - 1) * A.kal * 100, o = { ...x, mfe: 0, mae: 0, hedefT: null, zararT: null, tersT: null };
   for (const b of yol) {
-    const iyi = roi(x.yon > 0 ? b.h : b.l), kotu = roi(x.yon > 0 ? b.l : b.h), saat = (b.bit - x.t) / KR_1S;
+    const iyi = roi(x.yon > 0 ? b.h : b.l), kotu = roi(x.yon > 0 ? b.l : b.h), saat = (Math.min(b.bit, Date.now()) - x.t) / KR_1S;
     if (iyi > o.mfe) { o.mfe = iyi; o.mfeT = b.t; } if (kotu < o.mae) { o.mae = kotu; o.maeT = b.t; }
     if (saat <= 24) o.mae24 = Math.min(o.mae24 ?? 0, kotu);
     if (o.zararT === null && kotu <= -A.zarar) o.zararT = saat;
     if (o.hedefT === null && iyi >= A.hedef) o.hedefT = saat;
     if (o.tersT === null && -kotu >= A.hedef) o.tersT = saat;
-    if (o.r4 === undefined && saat >= 4) o.r4 = roi(b.c); if (o.r24 === undefined && saat >= 24) o.r24 = roi(b.c);
+    if (o.r4 === undefined && saat >= 4 && b.kapali !== false) o.r4 = roi(b.c); if (o.r24 === undefined && saat >= 24 && b.kapali !== false) o.r24 = roi(b.c);
   }
-  o.n = yol.length ? (yol[yol.length - 1].bit - x.t) / KR_1S : 0;
-  if (o.n >= 167) { o.n = 168; o.r168 = roi(yol[yol.length - 1].c); }
+  o.n = yol.length ? (Math.min(yol[yol.length - 1].bit, Date.now()) - x.t) / KR_1S : 0;
+  if (o.n >= 167 && yol[yol.length - 1].kapali !== false) { o.n = 168; o.r168 = roi(yol[yol.length - 1].c); }
   o.onceZarar = o.zararT !== null && (o.hedefT === null || o.zararT <= o.hedefT);
   return o;
 }
@@ -2485,13 +2485,13 @@ $("kr-hesapla").onclick = () => krHesapla();
 function krDurumYaz(A = krAyar()) {
   const saat = ms => new Date(ms).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
   $("kr-durum").textContent = ` ${krAday.length} aday · ${new Date(Date.now() - A.gun * 86400000).toLocaleDateString("tr-TR")} – bugün · aday listesi ${saat(krZaman)}, sonuçlar ${saat(krGuncZaman)} ·`
-    + ` yeni adaylar sonraki 4 saatlik kapanışta (${saat(krKapanis() - 20000 + KR_4S)}) eklenir, açık sonuçlar 10 dk'da bir güncellenir`;
+    + ` yeni adaylar sonraki 4 saatlik kapanışta (${saat(krKapanis() - 20000 + KR_4S)}) eklenir, açık sonuçlar 2 dk'da bir güncellenir (devam eden mum dahil)`;
 }
 // açık (7 günü dolmamış) adayların sonuçlarını tazele — aday listesi aynı kalır
 async function krGuncelle() {
   if (krCalisiyor || !krAday.length) return; krCalisiyor = true; const A = krAyar();
   try {
-    const sira = krAday.filter(x => !(krKl[x.s + "|" + x.t] || {}).tam);
+    const sira = krAday.filter(x => !(krKl[x.s + "|" + x.t] || {}).tam);   // 7 günü dolmamış / devam eden mumlu olanlar
     const isci = async () => { while (sira.length) { const x = sira.shift(); try { await krMumlar(x); } catch (e) {} } };
     await Promise.all(Array.from({ length: 3 }, isci));
     krSonuc = krAday.map(x => krDegerlendir(x, krMum(x), A)).sort((a, b) => b.t - a.t);
@@ -2499,7 +2499,7 @@ async function krGuncelle() {
   } catch (e) {}
   krCalisiyor = false;
 }
-function krAc() { if (krCalisiyor) return; if (!krSonuc.length || krZaman < krKapanis() && Date.now() >= krKapanis()) krHesapla(); else if (Date.now() - krGuncZaman > 600000) krGuncelle(); }
+function krAc() { if (krCalisiyor) return; if (!krSonuc.length || krZaman < krKapanis() && Date.now() >= krKapanis()) krHesapla(); else if (Date.now() - krGuncZaman > 120000) krGuncelle(); }
 setInterval(() => { if (sekme === "karne") krAc(); }, 10000);
 // ================== ANLIK: saat başı hacim kıvılcımı (sadece LONG) ==================
 // arastirma/anlik_long.py "kıvılcım + öncesi yatay", likit coinler: 8 saatte +%3.5 (önce −%5 görmeden) %36, rastgele %17, ters yön %24, ort. +%3 ROI.
