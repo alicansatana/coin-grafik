@@ -423,6 +423,147 @@ function videoKatmani(k, tz, gorunenBas, lev, mmr) {
              toplam: kz.reduce((a, b) => a + b, 0), lev } };
 }
 
+// ---------- tarayıcı (bütün coinler) ----------
+const TARAYICI_MIN_HACIM = 5e6;
+let _tarOnbellek = { t: 0, veri: null };
+function tabanKova(deg, taban) {
+  for (const v of Object.values(taban.kovalar || {})) if (v.alt <= deg && deg < v.ust) return v;
+  return null;
+}
+async function tarayiciVeri(lev, taban) {
+  if (_tarOnbellek.veri && Date.now() - _tarOnbellek.t < 20000) return _tarOnbellek.veri;
+  const [tic, prem] = await Promise.all([jget("/fapi/v1/ticker/24hr"), jget("/fapi/v1/premiumIndex")]);
+  const pm = new Map(prem.map(x => [x.symbol, x]));
+  const out = [];
+  for (const x of tic) {
+    if (!x.symbol.endsWith("USDT") || !pm.has(x.symbol)) continue;
+    const hacim = +x.quoteVolume;
+    if (hacim < TARAYICI_MIN_HACIM) continue;
+    const fiyat = +x.lastPrice, deg = +x.priceChangePercent, kova = tabanKova(deg, taban);
+    out.push({ symbol: x.symbol, fiyat, degisim: deg, hacim,
+      fon: (+(pm.get(x.symbol).lastFundingRate || 0)) * 100,
+      tepeye: (+x.highPrice / fiyat - 1) * 100, dibe: (+x.lowPrice / fiyat - 1) * 100,
+      durum: kova ? kova.ad : null, t4: kova ? kova["4s"] : null, t24: kova ? kova["24s"] : null });
+  }
+  out.sort((a, b) => Math.abs(b.degisim) - Math.abs(a.degisim));
+  const veri = { coinler: out.slice(0, 80), lev, taban_coin: taban.coin, taban_gun: taban.gun,
+                 guncelleme: new Date().toLocaleTimeString("tr-TR") };
+  _tarOnbellek = { t: Date.now(), veri };
+  return veri;
+}
+
+// ---------- paket: sayfanın beklediği V nesnesini üretir (Python'daki paket() ile aynı) ----------
+async function paketUret(tah, symbol, lev, fee, mmr, olcum, ilerle) {
+  await tah.veriGuncelle(ilerle);
+  ilerle && ilerle("katmanlar hazırlanıyor…");
+  const now = Date.now();
+  const price = await fiyatAl(symbol);
+  const tz = -new Date().getTimezoneOffset() * 60;
+  const s = tah.simdi, A = tah.adim;
+  const saat = ms => new Date(ms).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const zaman = (tMs, h) => Math.floor((tMs + MS5 * (h + 1) - 60000) / 1000) + tz;
+
+  const mumlar = tah.mum1.map(x => ({ time: Math.floor(x.t / 1000) + tz, open: x.o, high: x.h, low: x.l, close: x.c }));
+  const gorunenBas = tah.mum1[0].t;
+
+  const koni = {}; for (const q of ["p10", "p25", "p50", "p75", "p90", "p50o", "p50k"]) koni[q] = [];
+  if (yeterli(s)) for (const q of Object.keys(koni)) {
+    koni[q].push({ time: zaman(s.t, 0), value: s.baz });
+    s.dagilim.forEach((dg, h) => koni[q].push({ time: zaman(s.t, h + 1), value: s.baz * (1 + dg[q]) }));
+  }
+  const gecmis = {};
+  for (const h of tah.ufuklar) {
+    const seri = { p10: [], p50: [], p90: [] };
+    for (const t of [...tah.kayitlar.keys()].sort((a, b) => a - b)) {
+      const kay = tah.kayitlar.get(t), hedef = t + MS5 * (h + 1);
+      if (!yeterli(kay) || hedef > now || hedef < gorunenBas) continue;
+      const d = kay.dagilim[h - 1];
+      for (const q of Object.keys(seri)) seri[q].push({ time: zaman(t, h), value: kay.baz * (1 + d[q]) });
+    }
+    gecmis[h] = seri;
+  }
+  const [direncler, destekler] = await seviyeler(symbol, price);
+  const degme = (yollar, oran) => {
+    if (!yollar || !yollar.length) return 0;
+    let s2 = 0;
+    for (const y of yollar) if (y.some(([, hi, lo]) => oran > 0 ? hi >= oran : lo <= oran)) s2++;
+    return s2 / yollar.length;
+  };
+  for (const sv of direncler.concat(destekler)) {
+    const oran = sv.fiyat / price - 1;
+    sv.uzaklik = oran * 100; sv.roe = oran * 100 * lev;
+    sv.degme = degme(s.yollar, oran) * 100;
+  }
+  const kapanis = s.t + MS5;
+  const dilimler = [];
+  if (yeterli(s)) for (const h of [...new Set([1, 2, 3, 4].map(q => Math.max(1, Math.round(A * q / 4))))].sort((a, b) => a - b)) {
+    const dg = s.dagilim[h - 1], yuk = dg.yuk * 100;
+    dilimler.push({ aralik: `${saat(kapanis)} → ${saat(kapanis + h * MS5)}`, yuk,
+      egilim: yuk >= 55 ? "yukarı eğilim" : yuk <= 45 ? "aşağı eğilim" : "kararsız",
+      orta: s.baz * (1 + dg.p50), alt: s.baz * (1 + dg.p10), ust: s.baz * (1 + dg.p90),
+      roe_alt: dg.p10 * 100 * lev, roe_ust: dg.p90 * 100 * lev });
+  }
+  const liqRoe = (1 / lev - mmr) * 100 * lev;
+  const senaryolar = [];
+  if (destekler.length && direncler.length && yeterli(s)) {
+    const S = destekler[0].fiyat, R = direncler[0].fiyat, SR_TAMPON = 0.003;
+    for (const [yon, stop, hedef] of [["LONG", S * (1 - SR_TAMPON), R], ["SHORT", R * (1 + SR_TAMPON), S]]) {
+      const sg = yon === "LONG" ? 1 : -1;
+      const stopPct = (price - stop) / price * sg, hedefPct = (hedef - price) / price * sg;
+      if (stopPct <= 0 || hedefPct <= 0) continue;
+      let u = 0, top = 0;
+      for (const y of s.yollar || []) {
+        let sonuc = null;
+        for (const [, hi, lo] of y) {
+          const lehte = sg > 0 ? hi : -lo, aleyhte = sg > 0 ? -lo : hi;
+          if (lehte >= hedefPct && aleyhte >= stopPct) { sonuc = "belirsiz"; break; }
+          if (lehte >= hedefPct) { sonuc = "hedef"; break; }
+          if (aleyhte >= stopPct) { sonuc = "stop"; break; }
+        }
+        if (sonuc === "hedef") u++;
+        if (sonuc === "hedef" || sonuc === "stop") top++;
+      }
+      const pHedef = top ? u / top : 0;
+      const beklenti = top ? (pHedef * hedefPct - (1 - pHedef) * stopPct - 2 * fee) * 100 * lev : 0;
+      senaryolar.push({ yon, giris: price, stop, hedef, stop_roe: stopPct * 100 * lev,
+        hedef_roe: hedefPct * 100 * lev, p_hedef: pHedef * 100, beklenti,
+        likidasyon: stopPct * 100 * lev >= liqRoe });
+    }
+  }
+  const zincir = [];
+  for (const t of [...tah.kayitlar.keys()].sort((a, b) => a - b)) {
+    const kay = tah.kayitlar.get(t), kap = t + MS5, an = new Date(kap);
+    if ((an.getHours() * 60 + an.getMinutes()) % (A * 5) || !yeterli(kay) || kap + A * MS5 < gorunenBas) continue;
+    const yol = {};
+    for (const q of ["p10", "p50", "p90", "p50o", "p50k"]) {
+      yol[q] = [{ time: zaman(t, 0), value: kay.baz }];
+      for (let h = 1; h <= A; h++) yol[q].push({ time: zaman(t, h), value: kay.baz * (1 + kay.dagilim[h - 1][q]) });
+    }
+    zincir.push({ saat: saat(kap), bitis: saat(kap + A * MS5), ...yol });
+  }
+  const hayalet = [];
+  for (const t of [...tah.kayitlar.keys()].sort((a, b) => b - a)) {
+    const kay = tah.kayitlar.get(t), kap = t + MS5;
+    if (t >= s.t || kap < s.t + MS5 - 1 * 15 * 60000) continue;
+    if (new Date(kap).getMinutes() % 15 || !yeterli(kay)) continue;
+    const nokta = [{ time: zaman(t, 0), value: kay.baz, vo: kay.baz, vk: kay.baz }];
+    for (let h = 1; h <= A; h++) nokta.push({ time: zaman(t, h),
+      value: kay.baz * (1 + kay.dagilim[h - 1].p50), vo: kay.baz * (1 + kay.dagilim[h - 1].p50o),
+      vk: kay.baz * (1 + kay.dagilim[h - 1].p50k) });
+    hayalet.push(nokta);
+    if (hayalet.length >= 1) break;
+  }
+  return { symbol, lev, price, tz, liq_roe: liqRoe,
+    guncelleme: new Date().toLocaleTimeString("tr-TR"), tarih: new Date().toLocaleDateString("tr-TR"),
+    tahmin_saati: saat(kapanis), simdi_zaman: zaman(s.t, 0), min_benzer: MIN_BENZER, min_gun: MIN_GUN,
+    keskin_k: [KESKIN_ORTA, KESKIN_COK], ufuk_dk: A * 5, ufuklar: tah.ufuklar,
+    benzer: { n: s.n, gun: s.gun, m60: s.m60, rsi: s.rsi, trend: s.trend, vol: s.vol },
+    zincir, hayalet, mmr, mumlar, koni, gecmis, karne: tah.karne(), dilimler,
+    ict: ictKatmani(tah.k, tz, gorunenBas, now),
+    video: videoKatmani(tah.k, tz, gorunenBas, lev, mmr),
+    direncler, destekler, senaryolar };
+}
+
 // ---------- ölçüm tabloları (dosyadan okumak yerine gömülü: dosyaya çift tıklayınca da çalışsın) ----------
 
 const TABAN_GOMULU = {"kovalar": {"-100|-20": {"ad": "−%20'den fazla düştü", "alt": -100.0, "ust": -20.0, "4s": {"n": 13182, "yukari": 45.3, "ort": -0.12, "oynaklik": 6.33, "liq5_long": 5.7, "liq20_long": 58.9, "liq5_short": 8.3, "liq20_short": 56.8}, "24s": {"n": 13182, "yukari": 40.7, "ort": -0.69, "oynaklik": 15.34, "liq5_long": 27.1, "liq20_long": 84.1, "liq5_short": 28.6, "liq20_short": 79.7}}, "-20|-10": {"ad": "−%20 ile −%10", "alt": -20.0, "ust": -10.0, "4s": {"n": 57297, "yukari": 49.0, "ort": 0.08, "oynaklik": 2.92, "liq5_long": 0.7, "liq20_long": 30.8, "liq5_short": 1.2, "liq20_short": 31.6}, "24s": {"n": 57297, "yukari": 44.8, "ort": -0.15, "oynaklik": 7.13, "liq5_long": 6.0, "liq20_long": 67.4, "liq5_short": 10.1, "liq20_short": 64.1}}, "-10|-5": {"ad": "−%10 ile −%5", "alt": -10.0, "ust": -5.0, "4s": {"n": 205287, "yukari": 50.0, "ort": 0.07, "oynaklik": 1.77, "liq5_long": 0.2, "liq20_long": 14.4, "liq5_short": 0.3, "liq20_short": 14.3}, "24s": {"n": 205287, "yukari": 48.1, "ort": 0.11, "oynaklik": 4.44, "liq5_long": 1.6, "liq20_long": 49.6, "liq5_short": 3.9, "liq20_short": 49.2}}, "-5|5": {"ad": "−%5 ile +%5 (sakin)", "alt": -5.0, "ust": 5.0, "4s": {"n": 1885448, "yukari": 47.8, "ort": 0.04, "oynaklik": 1.25, "liq5_long": 0.1, "liq20_long": 6.2, "liq5_short": 0.2, "liq20_short": 8.1}, "24s": {"n": 1885448, "yukari": 49.0, "ort": 0.27, "oynaklik": 3.25, "liq5_long": 0.6, "liq20_long": 33.9, "liq5_short": 2.2, "liq20_short": 37.3}}, "5|10": {"ad": "+%5 ile +%10", "alt": 5.0, "ust": 10.0, "4s": {"n": 184371, "yukari": 45.6, "ort": 0.07, "oynaklik": 2.1, "liq5_long": 0.3, "liq20_long": 16.4, "liq5_short": 0.7, "liq20_short": 21.5}, "24s": {"n": 184371, "yukari": 45.2, "ort": 0.56, "oynaklik": 5.12, "liq5_long": 2.0, "liq20_long": 52.8, "liq5_short": 6.7, "liq20_short": 54.7}}, "10|25": {"ad": "+%10 ile +%25", "alt": 10.0, "ust": 25.0, "4s": {"n": 80479, "yukari": 45.8, "ort": 0.07, "oynaklik": 3.83, "liq5_long": 1.3, "liq20_long": 41.3, "liq5_short": 2.8, "liq20_short": 41.7}, "24s": {"n": 80479, "yukari": 41.3, "ort": 0.33, "oynaklik": 8.92, "liq5_long": 7.4, "liq20_long": 74.5, "liq5_short": 16.9, "liq20_short": 68.8}}, "25|40": {"ad": "+%25 ile +%40", "alt": 25.0, "ust": 40.0, "4s": {"n": 13085, "yukari": 46.4, "ort": -0.08, "oynaklik": 6.59, "liq5_long": 4.6, "liq20_long": 66.7, "liq5_short": 8.3, "liq20_short": 64.2}, "24s": {"n": 13085, "yukari": 39.2, "ort": 0.21, "oynaklik": 15.39, "liq5_long": 24.8, "liq20_long": 88.7, "liq5_short": 33.5, "liq20_short": 81.3}}, "40|1000000000.0": {"ad": "+%40'tan fazla yükseldi", "alt": 40.0, "ust": 1000000000.0, "4s": {"n": 8505, "yukari": 46.1, "ort": 0.07, "oynaklik": 10.45, "liq5_long": 14.4, "liq20_long": 79.2, "liq5_short": 20.0, "liq20_short": 75.6}, "24s": {"n": 8505, "yukari": 40.1, "ort": 0.62, "oynaklik": 24.08, "liq5_long": 46.8, "liq20_long": 92.9, "liq5_short": 49.1, "liq20_short": 87.5}}}, "coin": 528, "gun": 200};
