@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610072040"></script>
+<script src="hesap.js?v=202610072100"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -460,13 +460,14 @@ details.kavram p{margin:6px 0}
       "Alarm" sütunu: fiyat bölgeye girdiği an (destek üstü / direnç altı) — Binance'te o fiyata alarm kurabilirsin.</div>
   </div>
   <div class="card kart-ilk gizli" style="grid-column:1/-1">
-    <h2 style="margin-top:0">İlk hareket — 5 dakikada bir hacim kıvılcımı (sadece LONG, 60 dakikalık işlem)</h2>
+    <h2 style="margin-top:0">İlk hareket — 5 dakikada bir sert hacim patlaması (sadece LONG, 60 dakikalık işlem, hedef +%40 ROI)</h2>
     <div class="note" style="margin:0 0 8px">Her 5 dakikada en likit 150 coinin <b>son kapanmış 5 dakikalık mumuna</b> bakar. Aday olması için hepsi birden:
-      <b>son 15 dakikada +%1…+%4</b> · <b>son 15 dakikanın hacmi, son 24 saatin 15 dakikalık ortalamasının ≥5 katı</b> · <b>24 saatlik tepe kırıldı</b> · <b>alıcılar baskın (≥%55)</b>.
+      <b>son 15 dakikada +%2…+%4</b> · <b>son 15 dakikanın hacmi, son 24 saatin 15 dakikalık ortalamasının ≥10 katı</b> · <b>alıcılar baskın (≥%55)</b>. Hacim ≥15 kat olanlar <span class="dt-rozet rsi">güçlü</span>.
       Sadece son 10 dakikanın adayları ve fiyatı sinyalden en fazla <b>+%1</b> uzaklaşmış olanlar gösterilir.<br>
-      <b>Geçmiş ölçüm</b> (149 likit coin, son 90 gün, 5 dk mumlar): 60 dakika içinde <b>+%3'e (20x'te +%60 ROI) önce değen %20</b> — rastgele anlarda %2.6;
-      önce −%3'e (−%60 ROI) düşen %9; ikisine de değmeyen %71 (60. dakikada kapanır). İşlem başına ort. <b>+%1.5 ROI</b> (iki yarıda da artı, küçük).
-      <b>Hız kritik:</b> 5 dk geç giriş %18.5, 10 dk geç %17 ve kenar ~sıfır. Günde ~25 aday çıkar. Kesin tutacak liste değil: 5 adaydan ~1'i hızla +%60 yapar, ~1'i −%60 olur, ~3'ü yerinde sayar.</div>
+      <b>Geçmiş ölçüm</b> (149 likit coin, son 90 gün, 5 dk mumlar; 3000 kural/çıkış kombinasyonu denendi, ilk 60 günde seçildi, son 30 günde sınandı):
+      60 dakika içinde <b>+%2'ye (20x'te +%40 ROI) önce değen %42</b>, önce −%3'e (−%60 ROI) düşen %10, kalanı 60. dakikada kapanır. İşlem başına ort. <b>+%4 ROI</b>;
+      15 günlük 6 bloğun 5'inde artı. Hacim ≥15 kat: ort. +%6.4, 6 bloğun 6'sı artı. 5 dk geç giriş +%3.5. Hedefi +%3 (+%60) yaparsan ulaşan %32 ama ort. +%6.
+      Günde ~9 aday (≥15x: ~4). Çok sayıda kombinasyon denendiği için gerçek sonuç biraz daha düşük olabilir — sekmenin geçmiş tablosundan izle.</div>
     <div class="kontrol" style="padding:0 0 8px"><button id="ih-tara">Yeniden tara</button><span class="dim" id="ih-durum"></span></div>
     <div id="ih-saat" class="dim" style="font-size:12px;margin:0 0 6px"></div>
     <div style="overflow-x:auto"><table id="ih-tablo" class="is-tablo"></table></div>
@@ -476,7 +477,7 @@ details.kavram p{margin:6px 0}
     <div class="kontrol" style="padding:0 0 8px;flex-wrap:wrap;gap:8px"><button id="ih-g-hesapla">Son 3 günü hesapla</button><span class="dim" id="ih-g-durum">(otomatik çalışmaz — ~150 istek atar)</span></div>
     <div class="is-karolar" id="ih-g-ozet"></div>
     <div style="overflow-x:auto"><table id="ih-g-tablo" class="is-tablo"></table></div>
-    <div class="note"><b>Nasıl kullanılır:</b> aday çıkınca hemen gir; <b>+%3'e (20x'te +%60 ROI) limit satış</b>, <b>−%3'te (−%60 ROI) çık</b>, en fazla <b>60 dakika</b> tut.
+    <div class="note"><b>Nasıl kullanılır:</b> aday çıkınca hemen gir; <b>+%2'ye (20x'te +%40 ROI) limit satış</b>, <b>−%3'te (−%60 ROI) çık</b>, en fazla <b>60 dakika</b> tut.
       Sekme açıksa liste her 5 dakikalık mum kapanışından ~15 sn sonra kendiliğinden yenilenir, fiyatlar 15 sn'de bir güncellenir.
       Geçmiş tablosu aynı kuralı son 3 günün 5 dk mumlarıyla yeniden oynatır (coin başına saatte 1 sinyal). <span class="dim">Coin listesi bugünün en likit 150 coinidir. Adaylar Tahmin karnesine eklenmez.</span></div>
   </div>
@@ -1831,8 +1832,9 @@ function dt2Durum(k, a) {
   return { pompa, dip7: mn, ic, yakin, sinyal: pompa >= 30 && !!ic, izle: pompa >= 30 && !ic && !!yakin };
 }
 // ================== İLK HAREKET: 5 dk'da bir hacim kıvılcımı (sadece LONG) ==================
-// arastirma/anlik_5dk.py (149 likit coin, 90 gün, 5 dk): son 15 dk +%1…+%4, hacim >=5x, 24 s tepesi kırık, alıcı >=%55 ->
-// 60 dk içinde +%3 önce %20 (rastgele %2.6), −%3 önce %9, hiçbiri %71; ort. +%1.5 ROI/işlem; 5 dk geç %18.5, 10 dk geç %17.
+// arastirma/izgara_5dk.py + aday_saglam.py (149 likit coin, 90 gün, 5 dk; 3000 kombinasyon, ilk 60 gün seçim / son 30 gün test, 6 blok):
+// son 15 dk +%2…+%4, hacim >=10x, alıcı >=%55 -> hedef +%2 / stop −%3 / 60 dk: hedef %42, stop %10, ort. +%4.0 ROI, 6 bloğun 5'i artı;
+// hacim >=15x: +%6.4 (6/6). 5 dk geç giriş +%3.5. Eski kural (+%1–4, 5x, tepe kırık, hedef +%3) +%1.5 idi.
 const IH_ADET = 150, IH_5 = 300000;
 let ihSonuc = [], ihZaman = 0, ihTaraniyor = false, ihFiyat = {}, ihGecmis = [], ihGecmisCalisiyor = false;
 function ihDegerlendir(s, k, i = k.length - 1) {
@@ -1840,8 +1842,8 @@ function ihDegerlendir(s, k, i = k.length - 1) {
   let qs = 0, tepe = 0; for (let j = i - 290; j <= i - 3; j++) { qs += k[j].qv; tepe = Math.max(tepe, k[j].h); }
   const q15 = k[i].qv + k[i - 1].qv + k[i - 2].qv, tb15 = k[i].tb + k[i - 1].tb + k[i - 2].tb;
   const r15 = b.c / k[i - 3].c - 1, kat = q15 / (qs / 288 * 3 + 1e-9), alici = tb15 / (q15 + 1e-9);
-  const sart = { r15: r15 >= 0.01 && r15 <= 0.04, kat: kat >= 5, kir: b.c > tepe, alici: alici >= 0.55 };
-  return { s, t: b.t + IH_5, fiyat: b.c, r15, kat, alici, sart, aday: Object.values(sart).every(Boolean) };
+  const sart = { r15: r15 >= 0.02 && r15 <= 0.04, kat: kat >= 10, alici: alici >= 0.55 };
+  return { s, t: b.t + IH_5, fiyat: b.c, r15, kat, alici, kir: b.c > tepe, guclu: kat >= 15, sart, aday: Object.values(sart).every(Boolean) };
 }
 async function ihListe() {
   const bilgi = await (await fetch("https://fapi.binance.com/fapi/v1/exchangeInfo")).json();
@@ -1880,15 +1882,15 @@ function ihCiz() {
   const aday = ihSonuc.filter(x => x.aday && x.t >= sonBar - IH_5).sort((a, b) => b.t - a.t), kacan = [], gor = new Set();
   const goster = aday.filter(x => { if (gor.has(x.s)) return false; gor.add(x.s); const p = ihFiyat[x.s];
     if (p && p / x.fiyat - 1 > 0.01) { kacan.push(x.s.replace("USDT", "")); return false; } return true; });
-  $("ih-tablo").innerHTML = goster.length ? `<tr><th>coin</th><th>sinyal</th><th>giriş (sinyal)</th><th>şimdi</th><th>sinyalden beri</th><th>15 dk</th><th>hacim</th><th>alıcı</th><th>hedef +%3 (+%60 ROI)</th><th>çık −%3 (−%60 ROI)</th><th>en geç</th></tr>` +
+  $("ih-tablo").innerHTML = goster.length ? `<tr><th>coin</th><th>sinyal</th><th>giriş (sinyal)</th><th>şimdi</th><th>sinyalden beri</th><th>15 dk</th><th>hacim</th><th>alıcı</th><th>hedef +%2 (+%40 ROI)</th><th>çık −%3 (−%60 ROI)</th><th>en geç</th></tr>` +
     goster.map(x => { const p = ihFiyat[x.s], g = p || x.fiyat, yas = Math.max(0, Math.round((Date.now() - x.t) / 60000));
-      return `<tr><td>${coin(x.s)}</td><td>${saat(x.t)} <span class="dim">(${yas} dk önce)</span></td><td>${dtF(x.fiyat)}</td><td>${p ? dtF(p) : "–"}</td><td>${p ? yuz(p / x.fiyat - 1) : "–"}</td>
-      <td>${yuz(x.r15)}</td><td>${x.kat.toFixed(1)}x</td><td>%${(x.alici * 100).toFixed(0)}</td><td class="up">${dtF(g * 1.03)}</td><td class="down">${dtF(g * 0.97)}</td><td class="dim">${saat(x.t + 12 * IH_5)}</td></tr>`; }).join("")
-    : `<tr><td class="dim">${ihSonuc.length ? "Şu an aday yok" + (kacan.length ? " (fiyatı kaçtığı için gizlenen: " + kacan.join(", ") + ")" : "") + " — ölçümde günde ~25 aday çıkıyor, yani ortalama saatte 1." : "Taranıyor…"}</td></tr>`;
+      return `<tr><td>${coin(x.s)}${x.guclu ? ' <span class="dt-rozet rsi" title="Hacim ≥15x: ölçümde en iyi grup (ort. +%6.4 ROI, 6 bloğun 6\'sı artı)">güçlü</span>' : ""}</td><td>${saat(x.t)} <span class="dim">(${yas} dk önce)</span></td><td>${dtF(x.fiyat)}</td><td>${p ? dtF(p) : "–"}</td><td>${p ? yuz(p / x.fiyat - 1) : "–"}</td>
+      <td>${yuz(x.r15)}</td><td>${x.kat.toFixed(1)}x</td><td>%${(x.alici * 100).toFixed(0)}</td><td class="up">${dtF(g * 1.02)}</td><td class="down">${dtF(g * 0.97)}</td><td class="dim">${saat(x.t + 12 * IH_5)}</td></tr>`; }).join("")
+    : `<tr><td class="dim">${ihSonuc.length ? "Şu an aday yok" + (kacan.length ? " (fiyatı kaçtığı için gizlenen: " + kacan.join(", ") + ")" : "") + " — ölçümde günde ~9 aday çıkıyor (150 coinde)." : "Taranıyor…"}</td></tr>`;
   const izle = ihSonuc.filter(x => x.t === sonBar && !x.aday && x.r15 > 0).sort((a, b) => b.kat - a.kat).slice(0, 12);
   const isr = b => b ? '<span class="up">✓</span>' : '<span class="dim">✗</span>';
-  $("ih-izle").innerHTML = izle.length ? `<tr><th>coin</th><th>15 dk</th><th>+%1…4</th><th>hacim</th><th>≥5x</th><th>24s tepe kırıldı</th><th>alıcı ≥%55</th></tr>` +
-    izle.map(x => `<tr><td>${coin(x.s)}</td><td>${yuz(x.r15)}</td><td>${isr(x.sart.r15)}</td><td>${x.kat.toFixed(1)}x</td><td>${isr(x.sart.kat)}</td><td>${isr(x.sart.kir)}</td><td>${isr(x.sart.alici)} <span class="dim">%${(x.alici * 100).toFixed(0)}</span></td></tr>`).join("")
+  $("ih-izle").innerHTML = izle.length ? `<tr><th>coin</th><th>15 dk</th><th>+%2…4</th><th>hacim</th><th>≥10x</th><th>alıcı ≥%55</th><th>24s tepe kırıldı <span class="dim">(bilgi)</span></th></tr>` +
+    izle.map(x => `<tr><td>${coin(x.s)}</td><td>${yuz(x.r15)}</td><td>${isr(x.sart.r15)}</td><td>${x.kat.toFixed(1)}x</td><td>${isr(x.sart.kat)}</td><td>${isr(x.sart.alici)} <span class="dim">%${(x.alici * 100).toFixed(0)}</span></td><td>${isr(x.kir)}</td></tr>`).join("")
     : `<tr><td class="dim">–</td></tr>`;
   document.querySelectorAll("#ih-tablo .ih-coin, #ih-izle .ih-coin").forEach(a => a.onclick = e => { e.preventDefault(); sembolDegistir(a.dataset.s); });
 }
@@ -1905,8 +1907,8 @@ async function ihGecmisHesapla() {
           const a = ihDegerlendir(s, k, i); if (!a || !a.aday || a.t < bas || a.t - son < 12 * IH_5) continue;
           son = a.t; const p = a.fiyat, ileri = k.slice(i + 1, i + 13); let sonuc = 0, sure = null, mfe = 0;
           for (let q = 0; q < ileri.length; q++) { const b = ileri[q]; mfe = Math.max(mfe, (b.h / p - 1) * 2000);
-            if (b.l <= p * 0.97) { sonuc = -1; sure = (q + 1) * 5; break; } if (b.h >= p * 1.03) { sonuc = 1; sure = (q + 1) * 5; break; } }
-          const roi = sonuc === 1 ? 58 : sonuc === -1 ? -62 : ileri.length ? (ileri[ileri.length - 1].c / p - 1) * 2000 - 2 : 0;
+            if (b.l <= p * 0.97) { sonuc = -1; sure = (q + 1) * 5; break; } if (b.h >= p * 1.02) { sonuc = 1; sure = (q + 1) * 5; break; } }
+          const roi = sonuc === 1 ? 38 : sonuc === -1 ? -62 : ileri.length ? (ileri[ileri.length - 1].c / p - 1) * 2000 - 2 : 0;
           out.push({ ...a, sonuc, sure, mfe, roi, bitti: sonuc !== 0 || ileri.length >= 12, n: ileri.length });
         }
       } catch (e) {}
@@ -1925,12 +1927,12 @@ function ihGecmisCiz() {
   const ss = tut.map(x => x.sure).sort((a, b) => a - b), med = ss.length ? ss[Math.floor(ss.length / 2)] : null;
   const karo = (ad, d, alt) => `<div class="karo"><small>${ad}</small><b>${d}</b>${alt ? `<small>${alt}</small>` : ""}</div>`;
   $("ih-g-ozet").innerHTML = karo("Aday (3 gün)", ihGecmis.length, `${B.length} bitti`)
-    + karo("60 dk'da +%60 ROI (tuttu)", yuz(tut.length, B.length), `${tut.length}/${B.length} · 90 günlük ölçüm %20`)
-    + karo("Önce −%60'a düştü", yuz(dus.length, B.length), `90 günlük ölçüm %9`)
+    + karo("60 dk'da +%40 ROI (tuttu)", yuz(tut.length, B.length), `${tut.length}/${B.length} · 90 günlük ölçüm %42`)
+    + karo("Önce −%60'a düştü", yuz(dus.length, B.length), `90 günlük ölçüm %10`)
     + karo("İkisine de değmedi", yuz(hic.length, B.length), "60. dakikada kapanır")
     + karo("İşlem başına ort. ROI", ort === null ? "–" : isYuzde(ort), med === null ? "" : `tutanlarda medyan ${med} dk`);
   $("ih-g-tablo").innerHTML = ihGecmis.length ? `<tr><th>sinyal</th><th>coin</th><th>giriş</th><th>15 dk</th><th>hacim</th><th>sonuç (60 dk)</th><th>en iyi ROI</th><th>ROI</th></tr>` +
-    ihGecmis.slice(0, 150).map(x => `<tr><td>${saat(x.t)}</td><td><a href="#" class="ih-coin" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a></td><td>${dtF(x.fiyat)}</td>
+    ihGecmis.slice(0, 150).map(x => `<tr><td>${saat(x.t)}</td><td><a href="#" class="ih-coin" data-s="${x.s}"><b>${x.s.replace("USDT", "")}</b></a>${x.guclu ? ' <span class="dt-rozet rsi">güçlü</span>' : ""}</td><td>${dtF(x.fiyat)}</td>
       <td class="up">+${(x.r15 * 100).toFixed(1)}%</td><td>${x.kat.toFixed(1)}x</td>
       <td>${x.sonuc === 1 ? `<b class="up">✓ ${x.sure} dk içinde</b>` : x.sonuc === -1 ? `<b class="down">✗ önce −%60 (${x.sure}. dk)</b>` : x.bitti ? '<span class="dim">60 dk doldu</span>' : `<span class="dim">devam ediyor (${x.n * 5}. dk)</span>`}</td>
       <td>${isYuzde(x.mfe)}</td><td>${x.bitti ? isYuzde(x.roi) : "–"}</td></tr>`).join("")
