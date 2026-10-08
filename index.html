@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610072100"></script>
+<script src="hesap.js?v=202610082049"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -292,7 +292,7 @@ details.kavram p{margin:6px 0}
     <div class="gr-ust">
       <b id="gr-baslik" style="font-size:16px">–</b>
       <span class="gr-grup" id="gr-tf"><button data-tf="1m">1 dk</button><button data-tf="3m">3 dk</button><button data-tf="5m">5 dk</button><button data-tf="15m">15 dk</button><button data-tf="1h">1 saat</button><button data-tf="4h">4 saat</button></span>
-      <span class="gr-grup" id="gr-ac"><button data-ac="ema">EMA 20/50/200</button><button data-ac="hacim">Hacim</button><button data-ac="sr_bu">S/R bu grafik</button><button data-ac="sr_1h">S/R 1 saat</button><button data-ac="sr_4h">S/R 4 saat</button></span>
+      <span class="gr-grup" id="gr-ac"><button data-ac="ema">EMA 20/50/200</button><button data-ac="hacim">Hacim</button><button data-ac="sr_bu">S/R bu grafik</button><button data-ac="sr_1h">S/R 1 saat</button><button data-ac="sr_15m" title="15 dakikalık grafiğin dönüş noktalarından destek/direnç">S/R 15 dk</button><button data-ac="sr_4h">S/R 4 saat</button></span>
       <span class="gr-grup" id="gr-ac2"><button data-ac="gun" title="Dün ve geçen haftanın en yüksek/düşük fiyatı, bugünün açılışı">Dün / hafta</button><button data-ac="son" title="Son 24 saatin tepe/dibi ve 1 saatlikte son dönüş noktaları (tek dokunuş yeter)">Son tepe / dip</button><button data-ac="fib" title="Son 10 günün en büyük hareketinin Fibonacci seviyeleri">Fibonacci</button><button data-ac="yuvarlak" title="Fiyatın yakınındaki yuvarlak (psikolojik) seviyeler">Yuvarlak sayılar</button><button data-ac="yil" title="Son 1 yılın en yüksek ve en düşük fiyatı">1 yıl tepe / dip</button></span>
     </div>
     <div class="is-bar">
@@ -346,7 +346,7 @@ details.kavram p{margin:6px 0}
     <div class="gr-alt">
       <div style="overflow-x:auto"><h2 style="margin:4px 0 6px">Destek / direnç seviyeleri (fiyata en yakın)</h2><table id="gr-sr"></table></div>
       <div class="note" style="margin-top:0"><b>Seviyeler nasıl okunur?</b> Her zaman dilimi kendi dönüş noktalarından seviye üretir: <b>1–5 dk</b>'da çok sayıda, zayıf;
-        <b>1 saat / 4 saat</b>'te az ama güçlü seviye çıkar (çok daha fazla işlem o noktada dönmüş). Grafikte <b>kalın çizgi = 4 saat</b>, orta = 1 saat, ince kesikli = açık olan grafik.
+        <b>15 dk</b>'da orta sayıda, orta güçte; <b>1 saat / 4 saat</b>'te az ama güçlü seviye çıkar (çok daha fazla işlem o noktada dönmüş). Grafikte <b>kalın çizgi = 4 saat</b>, orta = 1 saat, ince düz = 15 dk, ince kesikli = açık olan grafik.
         "3x" = fiyat o bölgeden 3 ayrı kez dönmüş. <b>Önerim:</b> 4 saat / 1 saat seviyelerini harita gibi kullan, girişi 1–5 dk grafikte zamanla.
         Seviyeler <b>tam çizgi değil bölgedir</b>: ölçümlerimizde en güçlü 4 saatlik bölgeler bile sık sık iğneyle delindi (bölgenin %1 altına konan stop %70 patladı).
         <b>Ek seviyeler</b> (alttaki düğmeler) her zaman vardır — fiyat yeni tepedeyken ve geçmiş direnç yokken de: <span style="color:#ffb74d">dün/geçen hafta yüksek-düşük, bugün açılış</span>,
@@ -1521,7 +1521,7 @@ function sekmeUygula() {
   if (tarayici) tarayiciCek(true);
   if (diptepe) dtAc();
   if (ilk) ihAc();
-  if (grafik) grAc();
+  if (grafik) grAc(); else grWsKapat();
   if (islem) isCiz();
   if (karne) krAc();
   if (anlik) anAc();
@@ -1953,7 +1953,7 @@ setInterval(() => { if (sekme === "ilk" && ihSonuc.length) ihSimdi(); }, 15000);
 const GR_TZ = -new Date().getTimezoneOffset() * 60;
 const GR_MS = { "1m": 60e3, "3m": 180e3, "5m": 300e3, "15m": 900e3, "1h": 3600e3, "4h": 14400e3 };
 const GR_AD = { "1m": "1 dk", "3m": "3 dk", "5m": "5 dk", "15m": "15 dk", "1h": "1 saat", "4h": "4 saat" };
-let grTf = "5m", grAcik = { ema: true, hacim: true, sr_bu: true, sr_1h: true, sr_4h: true, gun: true, son: true, fib: false, yuvarlak: false, yil: true };
+let grTf = "5m", grAcik = { ema: true, hacim: true, sr_bu: true, sr_15m: true, sr_1h: true, sr_4h: true, gun: true, son: true, fib: false, yuvarlak: false, yil: true };
 try { const x = JSON.parse(localStorage.getItem("grAyar") || "{}"); if (GR_MS[x.tf]) grTf = x.tf; if (x.acik) Object.assign(grAcik, x.acik); } catch (e) {}
 let grGrafik = null, grMum, grHacim, grEma = {}, grK = [], grSembol = null, grUst = {}, grSR = {}, grCizgi = [], grYukleniyor = false;
 const grF = x => { const a = Math.abs(x); return x.toFixed(a >= 100 ? 2 : a >= 1 ? 4 : a >= 0.01 ? 5 : 7); };
@@ -2010,7 +2010,7 @@ function grSeviyeler(k, K) {
 }
 function grSRHesapla() {
   grSR = { [grTf]: grSeviyeler(grK, grTf === "4h" || grTf === "1h" ? 6 : 5) };
-  for (const tf of ["1h", "4h"]) if (tf !== grTf && grUst[tf]) grSR[tf] = grSeviyeler(grUst[tf], 6);
+  for (const tf of ["15m", "1h", "4h"]) if (tf !== grTf && grUst[tf]) grSR[tf] = grSeviyeler(grUst[tf], tf === "15m" ? 5 : 6);
 }
 // --- ek seviyeler: her zaman var olan referanslar (dün/hafta, son tepe-dip, Fibonacci, yuvarlak sayılar, 1 yıl) — ölçülmüş kural değil, görsel referans
 const GR_EK = {
@@ -2057,7 +2057,7 @@ function grSRCiz() {
   if (!grMum) return;
   grCizgi.forEach(x => grMum.removePriceLine(x)); grCizgi = [];
   const p = grK.length ? grK[grK.length - 1].c : 0, satir = [];
-  const stil = { "4h": [3, LS.Solid, 1], "1h": [2, LS.Solid, .85] }, acikMi = tf => tf === grTf ? grAcik.sr_bu : grAcik["sr_" + tf];
+  const stil = { "4h": [3, LS.Solid, 1], "1h": [2, LS.Solid, .85], "15m": [1, LS.Solid, .75] }, acikMi = tf => tf === grTf ? grAcik.sr_bu : grAcik["sr_" + tf];
   for (const tf of Object.keys(grSR)) {
     if (!acikMi(tf)) continue;
     const [w, st, op] = stil[tf] || [1, LS.Dashed, .8];
@@ -2075,7 +2075,7 @@ function grSRCiz() {
     satir.push({ z: { fiyat: x.fiyat, alt: x.fiyat, ust: x.fiyat, dok: "–" }, destek, ek: x, uz: (x.fiyat / p - 1) * 100 });
   }
   satir.sort((a, b) => b.z.fiyat - a.z.fiyat);
-  const guc = { "4h": "güçlü", "1h": "orta" };
+  const guc = { "4h": "güçlü", "1h": "orta", "15m": "zayıf-orta" };
   $("gr-sr").innerHTML = satir.length ? `<tr><th>tür</th><th>seviye</th><th>bölge</th><th>kaynak</th><th>dokunuş</th><th>uzaklık</th></tr>` + satir.map(s =>
     `<tr><td class="${s.destek ? "up" : "down"}">${s.destek ? "destek" : "direnç"}</td><td><b>${grF(s.z.fiyat)}</b></td><td class="dim">${s.ek ? "–" : grF(s.z.alt) + "–" + grF(s.z.ust)}</td>`
     + `<td>${s.ek ? `<span style="color:${GR_EK[s.ek.tur].renk}">${s.ek.ad}</span>` : `${GR_AD[s.tf]} <span class="dim">${guc[s.tf] || "zayıf"}</span>`}</td><td>${s.ek ? "–" : s.z.dok + "x"}</td><td class="${s.destek ? "up" : "down"}">${s.uz >= 0 ? "+" : ""}${s.uz.toFixed(2)}%</td></tr>`).join("")
@@ -2150,32 +2150,59 @@ async function grYukle() {
   if (!V || grYukleniyor) return;
   const sym = V.symbol; grYukleniyor = true; $("gr-baslik").textContent = `${sym} · ${GR_AD[grTf]} · yükleniyor…`;
   try {
-    const [k, k1, k4, g1, h1] = await Promise.all([grKlines(sym, grTf, 1000), grKlines(sym, "1h", 1000), grKlines(sym, "4h", 1000), grKlines(sym, "1d", 400), grKlines(sym, "1w", 3)]);
+    const [k, k1, k4, g1, h1, k15] = await Promise.all([grKlines(sym, grTf, 1000), grKlines(sym, "1h", 1000), grKlines(sym, "4h", 1000), grKlines(sym, "1d", 400), grKlines(sym, "1w", 3), grKlines(sym, "15m", 1000)]);
     if (sym !== grSembol) { grSembol = sym; grCizYukle(); }
-    grK = k; grUst = { "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() };
+    grK = k; grUst = { "15m": k15, "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() };
     grVeriBas(); grSRHesapla(); grSRCiz();
     grGrafik.timeScale().setVisibleLogicalRange({ from: k.length - 160, to: k.length + 8 });
+    grWsBaglan();
   } catch (e) { $("gr-baslik").textContent = `${sym} · veri alınamadı: ${e.message}`; }
   grYukleniyor = false;
+}
+// --- canlı akış: açık zaman diliminin mumu Binance WebSocket'inden gelir (Tahmin sekmesindeki gibi), REST 3 sn'lik yedek olarak kalır
+let grWs = null, grWsAnahtar = "", grWsSon = 0, grWsYol = 0, grWsZ = 0;
+function grBarUygula(b) {
+  const i = grK.findIndex(x => x.t === b.t); let yeni = false;
+  if (i >= 0) grK[i] = b; else if (b.t > grK[grK.length - 1].t) { grK.push(b); yeni = true; } else return false;
+  grMum.update({ time: grZaman(b), open: b.o, high: b.h, low: b.l, close: b.c });
+  if (grAcik.hacim) grHacim.update({ time: grZaman(b), value: b.v, color: b.c >= b.o ? "rgba(38,166,154,.45)" : "rgba(239,83,80,.45)" });
+  return yeni;
+}
+function grSonrasi(yeni) {
+  if (grAcik.ema) { const c = grK.map(b => b.c); for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].update({ time: grZaman(grK[grK.length - 1]), value: e[e.length - 1] }); } }
+  grAltGuncelle();
+  if (yeni) { grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); }
+}
+function grWsKapat() { if (grWs) { grWs.onclose = null; grWs.close(); grWs = null; } grWsAnahtar = ""; }
+function grWsBaglan() {
+  if (!grSembol || !grK.length) return;
+  const anahtar = grSembol + "|" + grTf; if (grWs && grWsAnahtar === anahtar && grWs.readyState <= 1) return;
+  grWsKapat(); grWsAnahtar = anahtar;
+  const w = grWs = new WebSocket(`wss://fstream.binance.com/${["market/ws", "ws"][grWsYol]}/${grSembol.toLowerCase()}@kline_${grTf}`);
+  w.onmessage = ev => {
+    if (w !== grWs || sekme !== "grafik") return;
+    const k = (JSON.parse(ev.data) || {}).k; if (!k || !grK.length) return;
+    grWsSon = Date.now();
+    const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.q };
+    const yeni = grBarUygula(b);
+    if (yeni || Date.now() - grWsZ > 400) { grWsZ = Date.now(); grSonrasi(yeni); grBilgi(null); }
+  };
+  w.onclose = () => { if (w !== grWs) return; grWs = null; grWsYol = (grWsYol + 1) % 2; setTimeout(() => { if (sekme === "grafik") grWsBaglan(); }, 2000); };
 }
 async function grCanli() {
   if (sekme !== "grafik" || !grK.length || grYukleniyor || !V) return;
   if (V.symbol !== grSembol) { grYukle(); return; }
   try {
-    const y = await grKlines(grSembol, grTf, 3); let yeni = false;
-    for (const b of y) {
-      const i = grK.findIndex(x => x.t === b.t);
-      if (i >= 0) grK[i] = b; else if (b.t > grK[grK.length - 1].t) { grK.push(b); yeni = true; } else continue;
-      grMum.update({ time: grZaman(b), open: b.o, high: b.h, low: b.l, close: b.c });
-      if (grAcik.hacim) grHacim.update({ time: grZaman(b), value: b.v, color: b.c >= b.o ? "rgba(38,166,154,.45)" : "rgba(239,83,80,.45)" });
-    }
-    if (grAcik.ema) { const c = grK.map(b => b.c); for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].update({ time: grZaman(grK[grK.length - 1]), value: e[e.length - 1] }); } }
-    grAltGuncelle();
-    if (yeni) { grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); }
     if (Date.now() - (grUst.zaman || 0) > 300000) {
-      const [k1, k4, g1, h1] = await Promise.all([grKlines(grSembol, "1h", 1000), grKlines(grSembol, "4h", 1000), grKlines(grSembol, "1d", 400), grKlines(grSembol, "1w", 3)]);
-      grUst = { "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() }; grSRHesapla(); grSRCiz();
+      grUst.zaman = Date.now();
+      const [k1, k4, g1, h1, k15] = await Promise.all([grKlines(grSembol, "1h", 1000), grKlines(grSembol, "4h", 1000), grKlines(grSembol, "1d", 400), grKlines(grSembol, "1w", 3), grKlines(grSembol, "15m", 1000)]);
+      grUst = { "15m": k15, "1h": k1, "4h": k4, "1d": g1, "1w": h1, zaman: Date.now() }; grSRHesapla(); grSRCiz();
     }
+    if (!grWs || grWs.readyState !== 1) grWsBaglan();
+    if (grWs && Date.now() - grWsSon < 6000) return;          // canlı akış sağlıklı: REST yedeğine gerek yok
+    const y = await grKlines(grSembol, grTf, 3); let yeni = false;
+    for (const b of y) if (grBarUygula(b)) yeni = true;
+    grSonrasi(yeni);
   } catch (e) {}
 }
 setInterval(grCanli, 3000);
@@ -2190,7 +2217,7 @@ document.querySelectorAll("#gr-ac [data-ac], #gr-ac2 [data-ac]").forEach(b => b.
   if (grK.length) { if (b.dataset.ac === "ema" || b.dataset.ac === "hacim") grVeriBas(); grSRCiz(); }
 });
 grDugmeler();
-function grAc() { grOlustur(); if (!grK.length || (V && V.symbol !== grSembol)) grYukle(); }
+function grAc() { grOlustur(); if (!grK.length || (V && V.symbol !== grSembol)) grYukle(); else grWsBaglan(); }
 // ================== İŞLEMLER: sanal (kağıt üstü) hesap, 20x cross ==================
 const IS_KAL = 20, IS_KOM = 0.0005, IS_MM = 0.005, IS_SAAT = [1, 3, 5, 24];
 let IS = { bakiye0: 400, acik: [], kapali: [], no: 0 }, isFiyat = {}, isSonTarama = 0, isTaraniyor = false, isGrCizgi = [];
