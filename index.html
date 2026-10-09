@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610092126"></script>
+<script src="hesap.js?v=202610092347"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -313,7 +313,7 @@ details.kavram p{margin:6px 0}
         <span id="gr-ciz-renkler" style="display:flex;gap:4px"></span><span class="ayrac"></span>
         <button id="gr-ciz-geri" title="Son çizimi geri al">↶</button><button id="gr-ciz-temizle" title="Bu coindeki bütün çizimleri sil">🗑</button>
       </span></div></div>
-    <div class="gr-gosterge-baslik"><b>MACD (12, 26, 9)</b> <span class="dim">— çubuklar sıfırın üstünde ve büyüyorsa kısa vadeli güç yukarı, altında ve büyüyorsa aşağı; mavi çizgi turuncuyu yukarı keserse güç yukarı dönüyor</span></div>
+    <div class="gr-gosterge-baslik"><b>MACD (12, 26, 9)</b> <span class="dim">(fiyatın yüzdesi olarak) — çubuklar sıfırın üstünde ve büyüyorsa kısa vadeli güç yukarı, altında ve büyüyorsa aşağı; mavi çizgi turuncuyu yukarı keserse güç yukarı dönüyor</span></div>
     <div id="gr-macd" class="gr-alt-grafik"></div>
     <div class="gr-gosterge-baslik"><b>RSI (14)</b> <span class="dim">— 70 üstü aşırı alım (çok hızlı yükselmiş), 30 altı aşırı satım (çok hızlı düşmüş)</span></div>
     <div id="gr-rsi" class="gr-alt-grafik" style="height:110px"></div>
@@ -326,7 +326,7 @@ details.kavram p{margin:6px 0}
       <p style="margin:0 0 8px"><b class="" style="color:#4fc3f7">Mavi çizgi — MACD</b> = (son 12 mumun ortalaması) − (son 26 mumun ortalaması).<br>
         Kısa ortalama yakın geçmişi, uzun ortalama biraz daha eski geçmişi temsil eder. Fiyat son zamanlarda yükseliyorsa yakın geçmiş daha pahalıdır, kısa ortalama uzunun üstüne çıkar ve <b>mavi artıya geçer</b>.
         Düşüyorsa tersi olur ve mavi eksiye iner.<br>
-        <span class="dim">Örnek: coin 10$'dan 11$'a çıktı. Son 12 mumun ortalaması ≈ 10.6$, son 26 mumunki ≈ 10.3$ → MACD = +0.3 (mavi sıfırın üstünde, eğilim yukarı).</span><br>
+        <span class="dim">Örnek: coin 10$'dan 11$'a çıktı. Son 12 mumun ortalaması ≈ 10.6$, son 26 mumunki ≈ 10.3$ → MACD = +0.3$; panelde fiyatın yüzdesi olarak gösterilir: 0.3 / 11 = <b>+%2.7</b> (mavi sıfırın üstünde, eğilim yukarı). Yüzde kullanılınca 0.02$'lık coinde de 100$'lık coinde de değerler aynı ölçekte okunur.</span><br>
         Mavinin <b>sıfırdan ne kadar uzak</b> olduğu eğilimin gücünü gösterir. Sayı fiyat cinsindendir; o yüzden 0.03$'lık bir coinde değer çok küçük görünür, normaldir.</p>
       <p style="margin:0 0 8px"><b style="color:#ffb74d">Turuncu çizgi — sinyal</b> = mavi çizginin son 9 mumluk ortalaması.<br>
         Yani mavinin "yavaş", gecikmeli kopyasıdır. Amaç maviyi kendi yakın geçmişiyle karşılaştırmak: mavi turuncunun <b>üstündeyse</b> yükseliş hızlanıyor (ya da düşüş yavaşlıyor),
@@ -2116,12 +2116,14 @@ function grAltNokta(i, m, sg, R) {
            r: i < 15 ? { time: t } : { time: t, value: R[i] } };
 }
 function grAltHesap() {
-  const c = grK.map(b => b.c), e12 = dtEma(c, 12), e26 = dtEma(c, 26), m = c.map((x, i) => e12[i] - e26[i]); return [m, dtEma(m, 9), dtRsi(c)];
+  // MACD fiyatin yuzdesi olarak (ucuz coinlerde 0.0000x yerine okunur deger; isaret ve kesisimler ayni kalir)
+  const c = grK.map(b => b.c), e12 = dtEma(c, 12), e26 = dtEma(c, 26), m = c.map((x, i) => e12[i] - e26[i]), sg = dtEma(m, 9);
+  return [m.map((x, i) => x / c[i] * 100), sg.map((x, i) => x / c[i] * 100), dtRsi(c)];
 }
 function grAltVeri() {
   grAltOlustur(); if (!grMacdG || !grK.length) return;
   const [m, sg, R] = grAltHesap(), P = grK.map((_, i) => grAltNokta(i, m, sg, R));
-  const p = grK[grK.length - 1].c, hs = p < 0.01 ? 8 : p < 1 ? 6 : p < 100 ? 5 : 3, pf = { priceFormat: { type: "price", precision: hs, minMove: Math.pow(10, -hs) } };
+  const pf = { priceFormat: { type: "custom", formatter: v => (v >= 0 ? "+" : "") + v.toFixed(3) + "%", minMove: 0.001 } };
   [grMacdH, grMacdL, grMacdS].forEach(s => s.applyOptions(pf));
   grAltYorum(m, sg, R);
   grMacdH.setData(P.map(x => x.h)); grMacdL.setData(P.map(x => x.l)); grMacdS.setData(P.map(x => x.s)); grRsiL.setData(P.map(x => x.r));
