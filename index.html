@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610082049"></script>
+<script src="hesap.js?v=202610092032"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -2144,7 +2144,9 @@ function grAltGuncelle() {
   if (!grMacdG || grK.length < 40) return;
   const [m, sg, R] = grAltHesap();
   grAltYorum(m, sg, R);
-  for (let i = grK.length - 3; i < grK.length; i++) { const x = grAltNokta(i, m, sg, R); grMacdH.update(x.h); grMacdL.update(x.l); grMacdS.update(x.s); grRsiL.update(x.r); }
+  // grafik kütüphanesi paneldeki SON noktadan eski veri kabul etmez: sadece son mumu yaz (yeni mum açıldıysa grSonrasi tüm paneli yeniden kurar)
+  const x = grAltNokta(grK.length - 1, m, sg, R);
+  try { grMacdH.update(x.h); grMacdL.update(x.l); grMacdS.update(x.s); grRsiL.update(x.r); } catch (e) { grAltVeri(); }
 }
 async function grYukle() {
   if (!V || grYukleniyor) return;
@@ -2170,8 +2172,7 @@ function grBarUygula(b) {
 }
 function grSonrasi(yeni) {
   if (grAcik.ema) { const c = grK.map(b => b.c); for (const n of [20, 50, 200]) { const e = dtEma(c, n); grEma[n].update({ time: grZaman(grK[grK.length - 1]), value: e[e.length - 1] }); } }
-  grAltGuncelle();
-  if (yeni) { grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); }
+  if (yeni) { grAltVeri(); grZ = grK.map(grZaman); grSRHesapla(); grSRCiz(); } else grAltGuncelle();
 }
 function grWsKapat() { if (grWs) { grWs.onclose = null; grWs.close(); grWs = null; } grWsAnahtar = ""; }
 function grWsBaglan() {
@@ -2183,9 +2184,11 @@ function grWsBaglan() {
     if (w !== grWs || sekme !== "grafik") return;
     const k = (JSON.parse(ev.data) || {}).k; if (!k || !grK.length) return;
     grWsSon = Date.now();
-    const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.q };
-    const yeni = grBarUygula(b);
-    if (yeni || Date.now() - grWsZ > 400) { grWsZ = Date.now(); grSonrasi(yeni); grBilgi(null); }
+    try {
+      const b = { t: k.t, o: +k.o, h: +k.h, l: +k.l, c: +k.c, v: +k.q };
+      const yeni = grBarUygula(b);
+      if (yeni || Date.now() - grWsZ > 400) { grWsZ = Date.now(); grSonrasi(yeni); grBilgi(null); }
+    } catch (e) { console.warn("grafik canlı akış:", e.message); }
   };
   w.onclose = () => { if (w !== grWs) return; grWs = null; grWsYol = (grWsYol + 1) % 2; setTimeout(() => { if (sekme === "grafik") grWsBaglan(); }, 2000); };
 }
