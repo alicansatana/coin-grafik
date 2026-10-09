@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610092057"></script>
+<script src="hesap.js?v=202610092126"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -389,7 +389,7 @@ details.kavram p{margin:6px 0}
       (varsayılan: her taramada Dip / Tepe taze tablosunda çıkan <b>bütün adaylar</b> — istersen her taramadan en güçlü N adayla sınırlayabilirsin; bir coin, bir önceki taramada listede değilse yeni aday sayılır — Dip / Tepe'deki "taze" ile aynı). Giriş = adayın çıktığı 4 saatlik mumun kapanışı (Dip / Tepe tablosunda "sinyal" saati); "Giriş" seçimiyle 1–8 saat geç girmenin sonucu görülür. Sonra 1 saatlik mumlarla:
       hedef ROI'ye değdi mi, ne kadar sürede, önce zarar eşiğine mi düştü. Her açılışta Binance verisinden yeniden hesaplanır — telefon ve bilgisayar aynı raporu görür.</div>
     <div class="kontrol" style="padding:0 0 10px;flex-wrap:wrap;gap:8px">
-      <label>Geriye <select id="kr-gun"><option value="7">7 gün</option><option value="14" selected>14 gün</option><option value="30">30 gün</option><option value="60">60 gün</option><option value="120">120 gün</option></select></label>
+      <label>Geriye <select id="kr-gun"><option value="7" selected>7 gün</option><option value="14">14 gün</option><option value="30">30 gün</option><option value="60">60 gün</option><option value="120">120 gün</option></select></label>
       <label>Hedef ROI % <input id="kr-hedef" type="number" value="70" min="5" style="width:64px"></label>
       <label>Zarar eşiği ROI % <input id="kr-zarar" type="number" value="100" min="5" style="width:64px"></label>
       <label>Kaldıraç <input id="kr-kal" type="number" value="20" min="1" max="125" style="width:54px">x</label>
