@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
 <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="hesap.js?v=202610101227"></script>
+<script src="hesap.js?v=202610101314"></script>
 <style>
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ec;--dim:#8b93a3;--up:#26a69a;--down:#ef5350;--sup:#4fc3f7;--res:#ffb74d;--cone:#e040fb}
 *{box-sizing:border-box}html{background:#0f1115}
@@ -2116,6 +2116,12 @@ function grEkSeviyeler(p) {
   }
   return tek;
 }
+// "güçlü" = aynı fiyatta (±%0.3) en az 3 zaman diliminin seviyesi örtüşüyor. Görsel işaret; ölçümde (147 coin, 1 yıl) örtüşen seviyeler de tutmadı
+function grGucluMu(z, tf) {
+  const es = []; for (const t2 of Object.keys(grSR)) if (t2 !== tf && grSR[t2].some(y => Math.abs(y.fiyat / z.fiyat - 1) < 0.003)) es.push(GR_AD[t2]);
+  const kat = es.length + 1;
+  return { guclu: kat >= 3, kat, es };
+}
 function grSRCiz() {
   if (!grMum) return;
   grCizgi.forEach(x => grMum.removePriceLine(x)); grCizgi = [];
@@ -2127,9 +2133,10 @@ function grSRCiz() {
     const alt = grSR[tf].filter(z => z.fiyat < p).sort((a, b) => b.fiyat - a.fiyat).slice(0, 4);
     const ust = grSR[tf].filter(z => z.fiyat >= p).sort((a, b) => a.fiyat - b.fiyat).slice(0, 4);
     for (const [z, destek] of alt.map(z => [z, true]).concat(ust.map(z => [z, false]))) {
-      const renk = destek ? `rgba(38,166,154,${op})` : `rgba(239,83,80,${op})`;
-      grCizgi.push(grMum.createPriceLine({ price: z.fiyat, color: renk, lineWidth: w, lineStyle: st, axisLabelVisible: true, title: `${GR_AD[tf]} ${z.dok}x` }));
-      satir.push({ z, destek, tf, uz: (z.fiyat / p - 1) * 100 });
+      const renk = destek ? `rgba(38,166,154,${op})` : `rgba(239,83,80,${op})`, gu = grGucluMu(z, tf);
+      grCizgi.push(grMum.createPriceLine({ price: z.fiyat, color: gu.guclu ? (destek ? "#00e5a0" : "#ff5252") : renk, lineWidth: gu.guclu ? Math.max(w, 3) : w, lineStyle: st, axisLabelVisible: true,
+        title: `${gu.guclu ? "★ " : ""}${GR_AD[tf]} ${z.dok}x${gu.kat >= 2 ? " +" + gu.es.join("+") : ""}` }));
+      satir.push({ z, destek, tf, uz: (z.fiyat / p - 1) * 100, gu });
     }
   }
   for (const x of grEkSeviyeler(p)) {
@@ -2141,7 +2148,7 @@ function grSRCiz() {
   const guc = { "4h": "güçlü", "1h": "orta", "15m": "zayıf-orta" };
   $("gr-sr").innerHTML = satir.length ? `<tr><th>tür</th><th>seviye</th><th>bölge</th><th>kaynak</th><th>dokunuş</th><th>uzaklık</th></tr>` + satir.map(s =>
     `<tr><td class="${s.destek ? "up" : "down"}">${s.destek ? "destek" : "direnç"}</td><td><b>${grF(s.z.fiyat)}</b></td><td class="dim">${s.ek ? "–" : grF(s.z.alt) + "–" + grF(s.z.ust)}</td>`
-    + `<td>${s.ek ? `<span style="color:${GR_EK[s.ek.tur].renk}">${s.ek.ad}</span>` : `${GR_AD[s.tf]} <span class="dim">${guc[s.tf] || "zayıf"}</span>`}</td><td>${s.ek ? "–" : s.z.dok + "x"}</td><td class="${s.destek ? "up" : "down"}">${s.uz >= 0 ? "+" : ""}${s.uz.toFixed(2)}%</td></tr>`).join("")
+    + `<td>${s.ek ? `<span style="color:${GR_EK[s.ek.tur].renk}">${s.ek.ad}</span>` : `${GR_AD[s.tf]} <span class="dim">${guc[s.tf] || "zayıf"}</span>${s.gu && s.gu.guclu ? ` <span class="dt-rozet rsi" title="Aynı fiyatta birden çok zaman diliminin seviyesi örtüşüyor${s.gu.es.length ? ": " + s.gu.es.join(", ") : ""}">★ güçlü${s.gu.es.length ? " (" + s.gu.es.join("+") + ")" : ""}</span>` : ""}`}</td><td>${s.ek ? "–" : s.z.dok + "x"}</td><td class="${s.destek ? "up" : "down"}">${s.uz >= 0 ? "+" : ""}${s.uz.toFixed(2)}%</td></tr>`).join("")
     : `<tr><td class="dim">Seviye bulunamadı (S/R düğmeleri kapalı olabilir).</td></tr>`;
 }
 function grVeriBas() {
